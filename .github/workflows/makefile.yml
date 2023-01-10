@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v3
         with:
-          node-version: "14"
+          node-version: "16"
 
       - name: Install MOPS
         run: npm i -g ic-mops
@@ -32,7 +32,7 @@ jobs:
 
       - name: Run Make
         run: make
-        
+
       - name: Upload Binaries Artifact
         uses: actions/upload-artifact@v2
         with:
