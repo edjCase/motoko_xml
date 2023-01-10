@@ -14,9 +14,6 @@ Test.wasm:
 Xml.wasm:
 	$(MOC) $(SOURCES) -wasi-system-api "./src/Xml.mo" -o ./build/Xml.wasm
 
-mops:
-	npm install
-
 .PHONY: clean
 clean:
 	rm -r ./build/*
