@@ -1,18 +1,24 @@
 SOURCES=$(shell mops sources)
 MOC=$(shell vessel bin)/moc
+BUILD=build
+COMPILE_MO=$(MOC) $(SOURCES) -wasi-system-api $< -o $@
+
 
 
 .PHONY: all
-all: test Xml.wasm
+all: test $(BUILD)/Xml.wasm
 
-test: Xml.wasm Test.wasm
-	wasmtime ./build/Test.wasm
+test: $(BUILD)/Tests.wasm
+	wasmtime ./build/Tests.wasm
 
-Test.wasm:
-	$(MOC) $(SOURCES) -wasi-system-api test/Tests.mo -o ./build/Test.wasm
+$(BUILD)/Tests.wasm: test/Tests.mo make_build_dir
+	$(COMPILE_MO)
 
-Xml.wasm:
-	$(MOC) $(SOURCES) -wasi-system-api "./src/Xml.mo" -o ./build/Xml.wasm
+$(BUILD)/Xml.wasm: src/Xml.mo make_build_dir
+	$(COMPILE_MO)
+
+make_build_dir:
+	mkdir -p $(BUILD)
 
 .PHONY: clean
 clean:
