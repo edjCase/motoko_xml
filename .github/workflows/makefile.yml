@@ -21,10 +21,10 @@ jobs:
         run: npm i -g ic-mops
 
       - name: Install Vessel
-        run: |
-          wget https://github.com/dfinity/vessel/releases/download/v0.6.4/vessel-linux64
-          mv vessel-linux64 vessel
-          chmod +x vessel
+        run: wget https://github.com/dfinity/vessel/releases/download/v0.6.4/vessel-linux64 -O vessel
+
+      - name: T
+        run: chmod +x ./vessel
 
       - name: Install Wasmtime
         run: curl https://wasmtime.dev/install.sh -sSf | bash
