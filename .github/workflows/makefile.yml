@@ -32,3 +32,9 @@ jobs:
 
       - name: Run Make
         run: make
+        
+      - name: Upload Binaries Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: binaries
+          path: build/
