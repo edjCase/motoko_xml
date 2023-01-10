@@ -2,6 +2,7 @@ import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
 import Iter "mo:base/Iter";
 import Text "mo:base/Text";
+
 module {
     public type File = {
         version : Text;
@@ -134,7 +135,7 @@ module {
                     return ?{
                         name = startTag.name;
                         attributes = startTag.attributes;
-                        children = #open(children.toArray());
+                        children = #open(Buffer.toArray(children));
                     };
                 };
             };
@@ -161,7 +162,7 @@ module {
                 let c : ?Char = reader.peek();
                 switch (c) {
                     case (null) {
-                        return #ok(tokenBuffer.toArray());
+                        return #ok(Buffer.toArray(tokenBuffer));
                     };
                     case (?'<') {
                         if (textBuffer.size() > 0) {
@@ -174,7 +175,7 @@ module {
                         };
                         let tag = getTag(tokenBuffer);
                         switch (tag) {
-                            case (null) return #err(tokenBuffer.toArray());
+                            case (null) return #err(Buffer.toArray(tokenBuffer));
                             case (?t) tokenBuffer.add(#tag(t));
                         };
                     };
@@ -214,7 +215,7 @@ module {
                         };
                         return ?{
                             name = name;
-                            attributes = attributesBuffer.toArray();
+                            attributes = Buffer.toArray(attributesBuffer);
                             style = style;
                         };
                     } else if (c == '/' or c == '?') {
