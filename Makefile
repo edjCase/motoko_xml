@@ -1,5 +1,4 @@
 BUILD=build
-COMPILE_MO=$($(shell vessel bin)/moc $(shell mops sources) -wasi-system-api $< -o $@)
 
 
 
@@ -10,10 +9,10 @@ test: $(BUILD)/Tests.wasm
 	wasmtime ./build/Tests.wasm
 
 $(BUILD)/Tests.wasm: test/Tests.mo make_build_dir install_mops_sources
-	$(COMPILE_MO)
+	$(shell vessel bin)/moc $(shell mops sources) -wasi-system-api $< -o $@
 
 $(BUILD)/Xml.wasm: src/Xml.mo make_build_dir install_mops_sources
-	$(COMPILE_MO)
+	$(shell vessel bin)/moc $(shell mops sources) -wasi-system-api $< -o $@
 
 install_mops_sources:
 	mops install
