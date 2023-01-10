@@ -1,5 +1,5 @@
 BUILD=build
-COMPILE_MO=$(shell vessel bin)/moc $(shell mops sources) -wasi-system-api $< -o $@
+COMPILE_MO=$($(shell vessel bin)/moc $(shell mops sources) -wasi-system-api $< -o $@)
 
 
 
