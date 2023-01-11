@@ -2,6 +2,7 @@ import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
 import Iter "mo:base/Iter";
 import Text "mo:base/Text";
+import Utf8 "Utf8";
 
 module {
     public type File = {
@@ -34,6 +35,37 @@ module {
         switch (parseFileText(reader)) {
             case (#err(tokens)) #err({ reader = reader; tokens = tokens });
             case (#ok(f)) #ok(f);
+        };
+    };
+
+    public func nextWord() : ?Text {
+        var inQuotes = false;
+        do ? {
+            let wordBuffer = Buffer.Buffer<Char>(1);
+            loop {
+                let p = peek();
+                if (p == null or (not inQuotes and (isWhitespace(p) or p == ?'<' or p == ?'>' or p == ?'/' or p == ?'?'))) {
+                    if (wordBuffer.size() > 0) {
+                        // Return word
+                        return ?Text.fromIter(wordBuffer.vals());
+                    };
+                    switch (p) {
+                        case (null) return null;
+                        case (?p) return ?Text.fromChar(p);
+                    };
+                } else {
+                    let quoteChar = Text.toIter("\"").next(); // TODO how to do '\"'??
+                    wordBuffer.add(next()!);
+                    if (p == quoteChar) {
+                        if (not inQuotes) {
+                            inQuotes := true;
+                        } else {
+                            // End of quotes is end of word
+                            return ?Text.fromIter(wordBuffer.vals());
+                        };
+                    };
+                };
+            };
         };
     };
 
@@ -139,196 +171,6 @@ module {
                     };
                 };
             };
-        };
-    };
-
-    public type Tag = {
-        name : Text;
-        attributes : [Attribute];
-        style : { #opening; #closing; #selfClosing };
-    };
-
-    public type XMLToken = {
-        #tag : Tag;
-        #text : Text;
-    };
-
-    public class XMLReader(reader : UTF8Reader) {
-
-        public func get() : { #ok : [XMLToken]; #err : [XMLToken] } {
-            let tokenBuffer = Buffer.Buffer<XMLToken>(1);
-            let textBuffer = Buffer.Buffer<Char>(1);
-            loop {
-                let c : ?Char = reader.peek();
-                switch (c) {
-                    case (null) {
-                        return #ok(Buffer.toArray(tokenBuffer));
-                    };
-                    case (?'<') {
-                        if (textBuffer.size() > 0) {
-                            // Trim whitespace
-                            let text = Text.trim(Text.fromIter(textBuffer.vals()), #predicate(func(c : Char) { isWhitespace(?c) }));
-                            if (text.size() > 0) {
-                                tokenBuffer.add(#text(text));
-                            };
-                            textBuffer.clear();
-                        };
-                        let tag = getTag(tokenBuffer);
-                        switch (tag) {
-                            case (null) return #err(Buffer.toArray(tokenBuffer));
-                            case (?t) tokenBuffer.add(#tag(t));
-                        };
-                    };
-                    case (?c) {
-                        let _ = reader.next();
-                        textBuffer.add(c);
-                    };
-                };
-            };
-        };
-
-        private func getTag(tokenBuffer : Buffer.Buffer<XMLToken>) : ?Tag {
-            do ? {
-                let open = reader.next()!;
-                if (open != '<') {
-                    return null;
-                };
-                let isClosingTag = reader.peek()! == '/';
-                if (isClosingTag) {
-                    let _ = reader.next();
-                };
-                let name : Text = reader.nextWord()!;
-                let inText = false;
-                var previousChar : ?Char = null;
-
-                let attributesBuffer = Buffer.Buffer<Attribute>(0);
-                label main loop {
-                    reader.skipWhitespace();
-                    let c : Char = reader.peek()!;
-                    if (c == '>') {
-                        let _ = reader.next()!; // read the peek
-                        let style = switch (previousChar) {
-                            case (?'/') #selfClosing;
-                            case (p) {
-                                if (isClosingTag) { #closing } else { #opening };
-                            };
-                        };
-                        return ?{
-                            name = name;
-                            attributes = Buffer.toArray(attributesBuffer);
-                            style = style;
-                        };
-                    } else if (c == '/' or c == '?') {
-                        let _ = reader.next();
-                        //Skip
-                    } else {
-                        let attributeText = reader.nextWord()!;
-                        let splitValues : Iter.Iter<Text> = Text.split(attributeText, #char('='));
-                        let attributeName = splitValues.next()!;
-                        let quoteChar = Text.toIter("\"").next()!; // TODO how to do '\"'??
-                        let attributeValue : ?Text = switch (splitValues.next()) {
-                            case (null) null;
-                            case (?v) ?Text.trim(v, #char(quoteChar)); // Trim quotes
-                        };
-                        if (splitValues.next() != null) {
-                            return null; // Should only be 1 or 2 values
-                        };
-                        attributesBuffer.add({
-                            name = attributeName;
-                            value = attributeValue;
-                        });
-                    };
-                    previousChar := reader.current();
-                };
-                return null;
-            };
-        };
-    };
-
-    public class UTF8Reader(bytes : Blob) {
-        let value : ?Text = Text.decodeUtf8(bytes); // TODO
-        let iter : Iter.Iter<Char> = switch (value) {
-            case (null) { { next = func() { null } } };
-            case (?v) Text.toIter(v);
-        };
-        var peekCache : ?Char = null;
-        var currentValue : ?Char = null;
-
-        public func current() : ?Char {
-            currentValue;
-        };
-
-        public func peek() : ?Char {
-            if (peekCache == null) {
-                peekCache := iter.next();
-            };
-            return peekCache;
-        };
-
-        public func next() : ?Char {
-            if (peekCache == null) {
-                iter.next();
-            } else {
-                let next = peekCache;
-                // clear cache since it moved to next
-                peekCache := null;
-                currentValue := next;
-                next;
-            };
-        };
-
-        public func nextWord() : ?Text {
-            var inQuotes = false;
-            do ? {
-                let wordBuffer = Buffer.Buffer<Char>(1);
-                loop {
-                    let p = peek();
-                    if (p == null or (not inQuotes and (isWhitespace(p) or p == ?'<' or p == ?'>' or p == ?'/' or p == ?'?'))) {
-                        if (wordBuffer.size() > 0) {
-                            // Return word
-                            return ?Text.fromIter(wordBuffer.vals());
-                        };
-                        switch (p) {
-                            case (null) return null;
-                            case (?p) return ?Text.fromChar(p);
-                        };
-                    } else {
-                        let quoteChar = Text.toIter("\"").next(); // TODO how to do '\"'??
-                        wordBuffer.add(next()!);
-                        if (p == quoteChar) {
-                            if (not inQuotes) {
-                                inQuotes := true;
-                            } else {
-                                // End of quotes is end of word
-                                return ?Text.fromIter(wordBuffer.vals());
-                            };
-                        };
-                    };
-                };
-            };
-        };
-
-        public func skipWhitespace() : () {
-            loop {
-                let nextChar = peek();
-                if (isWhitespace(nextChar)) {
-                    let _ = next(); // Skip whitespace
-                } else {
-                    return;
-                };
-            };
-        };
-
-    };
-
-    private func isWhitespace(c : ?Char) : Bool {
-        switch (c) {
-            case (null) false;
-            case (?' ') true;
-            case (?'\t') true;
-            case (?'\n') true;
-            case (?'\r') true;
-            case (?c) false;
         };
     };
 
