@@ -12,7 +12,7 @@ Currently there is no official package but there is a manual process:
 
 ```
 {
-    name = "xtendedNumbers"
+    name = "xtended-numbers"
     , version = "{{Version}}"
     , repo = "https://github.com/gekctek/motoko_numbers"
     , dependencies = [] : List Text
@@ -21,8 +21,8 @@ Currently there is no official package but there is a manual process:
 
 Where `{{Version}}` should be replaced with the latest release from https://github.com/Gekctek/motoko_numbers/releases/
 
-2. Add `xtendedNumbers` as a value in the dependencies list
-3. Run `./build.sh` which runs the vessel command to install the package
+2. Add `xtended-numbers` as a value in the dependencies list
+3. Run `make` which runs the vessel command to install the package
 
 # API
 

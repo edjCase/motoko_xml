@@ -5,7 +5,20 @@ let Package =
 let
   -- This is where you can add your own packages to the package-set
   additions =
-    [] : List Package
+    [
+      {
+         name = "xtended-numbers"
+         , version = "v1.0.2"
+         , repo = "https://github.com/edjcase/motoko_numbers"
+         , dependencies = [] : List Text
+      },
+      {
+         name = "base"
+         , version = "moc-0.7.4"
+         , repo = "https://github.com/dfinity/motoko-base"
+         , dependencies = [] : List Text
+      }
+    ] : List Package
 
 let
   {- This is where you can override existing packages in the package-set
