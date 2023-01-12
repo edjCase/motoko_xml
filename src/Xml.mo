@@ -5,13 +5,15 @@ import Text "mo:base/Text";
 import Utf8 "Utf8";
 import Lexer "Lexer";
 import Parser "Parser";
+import Types "Types";
+import Blob "mo:base/Blob";
 
 module {
     public func decode(bytes : Blob) : ?Types.Document {
         do ? {
-            let reader = Utf8.Reader(bytes);
+            let reader = Utf8.Reader(Iter.fromArray(Blob.toArray(bytes))); // TODO iter from blob?
             let tokens : [Lexer.Token] = Lexer.tokenize(reader)!;
-            Parser.parseDocument(tokens);
+            Parser.parseDocument(tokens)!;
         };
     };
 
