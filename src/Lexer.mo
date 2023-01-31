@@ -2,6 +2,8 @@ import Utf8 "Utf8";
 import Buffer "mo:base/Buffer";
 import Text "mo:base/Text";
 import Iter "mo:base/Iter";
+import Debug "mo:base/Debug";
+import Char "mo:base/Char";
 
 module {
 
@@ -24,6 +26,21 @@ module {
     };
 
     public type TokenResult = { #ok : Token; #invalidToken };
+
+    public func tokenizeText(value : Text) : ?[Token] {
+        let reader = Utf8.Reader(Text.toIter(value));
+        return tokenize(reader);
+    };
+
+    public func tokenizeBlob(value : Blob) : ?[Token] {
+        let reader = Utf8.Reader(Utf8.Utf8Iter(value.vals()));
+        return tokenize(reader);
+    };
+
+    public func tokenizeBytes(value : [Nat8]) : ?[Token] {
+        let reader = Utf8.Reader(Utf8.Utf8Iter(value.vals()));
+        return tokenize(reader);
+    };
 
     public func tokenize(reader : Utf8.Reader) : ?[Token] {
         let tokenBuffer = Buffer.Buffer<Token>(2);
@@ -68,6 +85,7 @@ module {
                         return #ok(token);
                     } else {
                         charBuffer.add(c);
+                        let _ = reader.next();
                     };
                 };
             };
@@ -76,14 +94,13 @@ module {
 
     private func getTagInfo(t : Text) : ?TagInfo {
         do ? {
-            let tagTokens : Iter.Iter<Text> = Text.split(t, #predicate(Utf8.isWhitespace));
+            let tagTokens : Iter.Iter<Text> = TagTokenIterator(t);
 
             let name : Text = tagTokens.next()!;
 
             let attributes = Buffer.Buffer<Attribute>(0);
 
             label l loop {
-                // TODO can there be spaces between the key, value and '='
                 let attribute = switch (tagTokens.next()) {
                     case (null) {
                         break l;
@@ -94,7 +111,7 @@ module {
                         let value = kvComponents.next()!;
                         attributes.add({
                             key = key;
-                            value = value;
+                            value = Text.trim(value, #char(Text.toIter("\"").next()!)); // TODO how to do a single double quote character
                         });
                     };
                 };
@@ -107,9 +124,43 @@ module {
         };
     };
 
+    private class TagTokenIterator(t : Text) : Iter.Iter<Text> {
+        let charIter = Text.toIter(t);
+
+        public func next() : ?Text {
+            let charBuffer = Buffer.Buffer<Char>(3);
+            var inQuotes = false;
+            loop {
+                switch (charIter.next()) {
+                    case (null) return getTextFromBuffer(charBuffer);
+                    case (?c) {
+                        // TODO how to do a single double quote character
+                        if (?c == Text.toIter("\"").next()) {
+                            inQuotes := not inQuotes;
+                        } else {
+                            if (not inQuotes) {
+                                if (Utf8.isWhitespace(c)) {
+                                    return getTextFromBuffer(charBuffer);
+                                };
+                            };
+                            charBuffer.add(c);
+                        };
+                    };
+                };
+            };
+        };
+
+        private func getTextFromBuffer(charBuffer : Buffer.Buffer<Char>) : ?Text {
+            if (charBuffer.size() < 1) {
+                return null;
+            };
+            return ?Text.fromIter(charBuffer.vals());
+        };
+    };
+
     private func parseTagToken(reader : Utf8.Reader) : ?Token {
         do ? {
-            let tagValue : Text = Text.trim(reader.readUntil(#char('>'), true)!, #char('>'));
+            let tagValue : Text = Text.trim(Text.trim(reader.readUntil(#char('>'), true)!, #char('>')), #char('<'));
 
             if (Text.startsWith(tagValue, #char('/'))) {
                 #endTag({ name = Text.trimStart(tagValue, #char('/')) });
@@ -122,13 +173,15 @@ module {
                     return null;
                 };
                 let tagInfo : TagInfo = getTagInfo(Text.trim(tagValue, #char('?')))!;
-
                 #processingInstructions(tagInfo);
 
             } else {
-                let tagInfo : TagInfo = getTagInfo(tagValue)!;
-                let last = reader.next();
-                let isSelfClosing = last == ?'/';
+                let trimmedTagValue = Text.trimEnd(tagValue, #char('/'));
+
+                let isSelfClosing = trimmedTagValue.size() != tagValue.size(); // Check to see if the / was removed, if it was, then self closing
+
+                let tagInfo : TagInfo = getTagInfo(trimmedTagValue)!;
+
                 #startTag({
                     tagInfo with selfClosing = isSelfClosing
                 });

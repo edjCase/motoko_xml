@@ -3,10 +3,12 @@ import Text "mo:base/Text";
 import Buffer "mo:base/Buffer";
 import Blob "mo:base/Blob";
 import Char "mo:base/Char";
-import NatX "mo:xtended-numbers/NatX"
+import NatX "mo:xtended-numbers/NatX";
+import Debug "mo:base/Debug";
 
 module Utf8 {
-    private class Utf8Iter(bytes : Iter.Iter<Nat8>) {
+
+    public class Utf8Iter(bytes : Iter.Iter<Nat8>) : Iter.Iter<Char> {
         private func nextNat32(isSubByte : Bool) : ?Nat32 {
             do ? {
                 let byte = bytes.next()!;
@@ -59,8 +61,7 @@ module Utf8 {
         };
     };
 
-    public class Reader(bytes : Iter.Iter<Nat8>) {
-        let iter : Utf8Iter = Utf8Iter(bytes);
+    public class Reader(iter : Iter.Iter<Char>) {
         var peekCache : ?Char = null;
         var currentValue : ?Char = null;
 
@@ -146,7 +147,7 @@ module Utf8 {
                     };
                     charBuffer.add(currentChar);
                 };
-                return ?Buffer.toText<Char>(charBuffer, Text.fromChar); // TODO optimize each char becoming text and concat? Cant find a Buffer<Char> -> Text
+                return ?Text.fromIter(charBuffer.vals()); // TODO optimize each char becoming text and concat? Cant find a Buffer<Char> -> Text
             };
         };
 
