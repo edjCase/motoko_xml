@@ -12,8 +12,8 @@ import Debug "mo:base/Debug";
 module {
     public func decode(bytes : Blob) : ?Types.Document {
         do ? {
-            let tokens : [Lexer.Token] = Lexer.tokenizeBlob(bytes)!;
-            let doc = Parser.parseDocument(tokens)!;
+            let tokens : [Types.Token] = Lexer.tokenizeBlob(bytes)!;
+            let doc = Parser.parseDocument(Iter.fromArray(tokens))!;
             Debug.trap(debug_show (doc));
         };
     };

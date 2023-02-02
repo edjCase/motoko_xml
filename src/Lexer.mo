@@ -219,6 +219,11 @@ module {
     };
 
     private func fromText(value : Text) : ?Nat {
-        ?0; // TODO
+        // TODO
+        switch (value) {
+            case "0" ?0;
+            case "1" ?1;
+            case _ Debug.trap("Unrecognized number");
+        };
     };
 };
