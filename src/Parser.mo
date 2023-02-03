@@ -3,6 +3,7 @@ import Types "Types";
 import Iter "mo:base/Iter";
 import Buffer "mo:base/Buffer";
 import Text "mo:base/Text";
+import Debug "mo:base/Debug";
 
 module {
 
@@ -35,7 +36,7 @@ module {
                             processInstructions = Buffer.toArray(processingInstructions);
                         };
                     };
-                    case (_) return null;
+                    case (t) Debug.trap(debug_show (t));
                 };
             };
         };
@@ -57,13 +58,19 @@ module {
                         let inner = parseElement(tokens, tag, tag.selfClosing)!;
                         children.add(#element(inner));
                     };
+                    case (#endTag(t)) {
+                        if (t.name != startTag.name) {
+                            return null;
+                        };
+                        break l;
+                    };
                     case (#text(t)) {
                         children.add(#text(t));
                     };
                     case (#comment(c)) {
                         children.add(#comment(c));
                     };
-                    case _ return null; // Invalid type
+                    case t Debug.trap(debug_show (t)); // Invalid type
                 };
             };
             return ?{
