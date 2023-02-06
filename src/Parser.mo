@@ -36,7 +36,7 @@ module {
                             processInstructions = Buffer.toArray(processingInstructions);
                         };
                     };
-                    case (t) Debug.trap(debug_show (t));
+                    case (t) return null; // Invalid type
                 };
             };
         };
@@ -60,6 +60,7 @@ module {
                     };
                     case (#endTag(t)) {
                         if (t.name != startTag.name) {
+                            Debug.trap(t.name # " " # startTag.name);
                             return null;
                         };
                         break l;
@@ -70,7 +71,7 @@ module {
                     case (#comment(c)) {
                         children.add(#comment(c));
                     };
-                    case t Debug.trap(debug_show (t)); // Invalid type
+                    case t return null; // Invalid type
                 };
             };
             return ?{

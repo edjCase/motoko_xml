@@ -155,10 +155,11 @@ module {
             let tagValue : Text = Text.trim(Text.trim(reader.readUntil(#char('>'), true)!, #char('>')), #char('<'));
 
             if (Text.startsWith(tagValue, #char('/'))) {
-                #endTag({ name = Text.trimStart(tagValue, #char('/')) });
+                #endTag({
+                    name = Text.trim(Text.trimStart(tagValue, #char('/')), #char(' ')); // TODO trim all whitespace
+                });
             } else if (Text.startsWith(tagValue, #text("!--"))) {
-                let commentValue : Text = reader.readUntil(#text("--!>"), true)!;
-                #comment(commentValue);
+                #comment(Text.trim(Text.trim(tagValue, #text("!")), #text("--")));
             } else if (Text.startsWith(tagValue, #char('?'))) {
                 if (not Text.endsWith(tagValue, #char('?'))) {
                     // Must end in '?'

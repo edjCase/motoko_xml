@@ -5,10 +5,12 @@ import Iter "mo:base/Iter";
 
 module {
     public func run() {
-        let doc = Parser.parseDocument(Iter.fromArray(TestData.ex1_tokens));
+        for (example in Iter.fromArray(TestData.examples)) {
+            let doc = Parser.parseDocument(Iter.fromArray(example.tokens));
 
-        if (doc != ?TestData.ex1_doc) {
-            Debug.trap("Invalid document.\n\nExpected:\n" # debug_show (TestData.ex1_doc) # "\n\nActual:\n" # debug_show (doc));
+            if (doc != ?example.doc) {
+                Debug.trap("Invalid document.\n\nExpected:\n" # debug_show (?example.doc) # "\n\nActual:\n" # debug_show (doc));
+            };
         };
     };
 };
