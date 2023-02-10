@@ -1,5 +1,8 @@
 import ParserTests "./ParserTests";
-import LexerTests "LexerTests";
+import TokenizerTests "./TokenizerTests";
+import Debug "mo:base/Debug";
 
 ParserTests.run();
-LexerTests.run();
+TokenizerTests.run();
+
+Debug.print("Test run complete!");

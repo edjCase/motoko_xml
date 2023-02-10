@@ -72,6 +72,12 @@ module {
                         };
                         return #ok(token);
                     } else {
+                        switch (c) {
+                            // < and > are only allowed in the context of tags
+                            // must be escaped for text
+                            case ('>') return #invalidToken;
+                            case (_)(); // Skip
+                        };
                         charBuffer.add(c);
                         let _ = reader.next();
                     };
@@ -82,9 +88,12 @@ module {
 
     private func getTagInfo(t : Text) : ?Types.TagInfo {
         do ? {
-            let tagTokens : Iter.Iter<Text> = TagTokenIterator(t);
+            let tagTokens : Iter.Iter<TagToken> = TagTokenIterator(t);
 
-            let name : Text = tagTokens.next()!;
+            let name : Text = switch (tagTokens.next()!) {
+                case (#invalid) return null;
+                case (#tag(t)) t;
+            };
 
             let attributes = Buffer.Buffer<Types.Attribute>(0);
 
@@ -93,7 +102,10 @@ module {
                     case (null) {
                         break l;
                     };
-                    case (?t) {
+                    case (?#invalid) {
+                        return null;
+                    };
+                    case (?#tag(t)) {
                         let kvComponents = Text.split(t, #char('='));
                         let name = kvComponents.next()!;
 
@@ -116,10 +128,14 @@ module {
         };
     };
 
-    private class TagTokenIterator(t : Text) : Iter.Iter<Text> {
+    private type TagToken = {
+        #tag : Text;
+        #invalid;
+    };
+    private class TagTokenIterator(t : Text) : Iter.Iter<TagToken> {
         let charIter = Text.toIter(t);
 
-        public func next() : ?Text {
+        public func next() : ?TagToken {
             let charBuffer = Buffer.Buffer<Char>(3);
             var inQuotes = false;
             loop {
@@ -129,6 +145,9 @@ module {
                         // '\u{22}' instead of '\"'. There is a parsing bug
                         if (c == '\u{22}') {
                             inQuotes := not inQuotes;
+                        } else if (c == '<' or c == '>') {
+                            // Only allowed as tag start/end
+                            return ?#invalid;
                         } else {
                             if (not inQuotes) {
                                 if (Utf8.isWhitespace(c)) {
@@ -142,17 +161,26 @@ module {
             };
         };
 
-        private func getTextFromBuffer(charBuffer : Buffer.Buffer<Char>) : ?Text {
+        private func getTextFromBuffer(charBuffer : Buffer.Buffer<Char>) : ?{
+            #tag : Text;
+        } {
             if (charBuffer.size() < 1) {
                 return null;
             };
-            return ?Text.fromIter(charBuffer.vals());
+            return ?#tag(Text.fromIter(charBuffer.vals()));
         };
     };
 
     private func parseTagToken(reader : Utf8.Reader) : ?Types.Token {
         do ? {
-            let tagValue : Text = Text.trim(Text.trim(reader.readUntil(#char('>'), true)!, #char('>')), #char('<'));
+            let untrimmedTagValue : Text = reader.readUntil(#char('>'), true)!;
+
+            let tagValue : Text = Text.trim(Text.trim(untrimmedTagValue, #char('>')), #char('<'));
+
+            if (Nat.sub(untrimmedTagValue.size(), tagValue.size()) > 2) {
+                // Invalid, more that just one < at the beginnin
+                return null;
+            };
 
             if (Text.startsWith(tagValue, #char('/'))) {
                 #endTag({

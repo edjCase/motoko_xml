@@ -8,6 +8,28 @@ module {
     };
     public let examples : [Example] = [
         {
+            raw = "<root></root>";
+            tokens = [
+                #startTag({
+                    attributes = [];
+                    name = "root";
+                    selfClosing = false;
+                }),
+                #endTag({ name = "root" }),
+            ];
+            doc = {
+                encoding = null;
+                processInstructions = [];
+                root = {
+                    attributes = [];
+                    children = #open([]);
+                    name = "root";
+                };
+                standalone = null;
+                version = null;
+            };
+        },
+        {
             raw = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><top a=b c=\"d\"><!-- comment --!><mid t=5/><bottom>Content</ bottom></top>";
             tokens = [
                 #xmlDeclaration({
@@ -1430,6 +1452,69 @@ module {
                 standalone = null;
                 version = ?{ major = 1; minor = 0 };
             };
+        },
+    ];
+
+    public type TokenizingFailExample = {
+        reason : Text;
+        rawXml : Text;
+    };
+
+    public let TokenizingFailureExamples : [TokenizingFailExample] = [
+        {
+            reason = "Bad opening tag, < and > are only allowed for tags";
+            rawXml = "root></root>";
+        },
+        {
+            reason = "Bad text, < and > are only allowed for tags";
+            rawXml = "<root><</root>";
+        },
+        {
+            reason = "Bad text, < and > are only allowed for tags";
+            rawXml = "<root>></root>";
+        },
+        {
+            reason = "Invalid xml declaration";
+            rawXml = "<?xml><root></root>";
+        },
+    ];
+
+    public type ParsingFailExample = {
+        reason : Text;
+        tokens : [Types.Token];
+    };
+
+    public let parsingFailureExamples : [ParsingFailExample] = [
+        {
+            reason = "Multiple roots";
+            tokens = [
+                #startTag({
+                    attributes = [];
+                    name = "root1";
+                    selfClosing = false;
+                }),
+                #endTag({ name = "root1" }),
+                #startTag({
+                    attributes = [];
+                    name = "root2";
+                    selfClosing = false;
+                }),
+                #endTag({ name = "root2" }),
+            ];
+        },
+        {
+            reason = "No root";
+            tokens = [];
+        },
+        {
+            reason = "No root";
+            tokens = [
+                #xmlDeclaration({
+                    encoding = null;
+                    standalone = null;
+                    version = { major = 1; minor = 0 };
+                }),
+            ];
         },
     ];
 

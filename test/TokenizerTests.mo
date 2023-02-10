@@ -1,12 +1,17 @@
 import Debug "mo:base/Debug";
-import Lexer "../src/Lexer";
+import Tokenizer "../src/Tokenizer";
 import Iter "mo:base/Iter";
 import TestData "./TestData";
 
 module {
     public func run() {
+        successCases();
+        failureCases();
+    };
+
+    private func successCases() {
         for (example in Iter.fromArray(TestData.examples)) {
-            let tokens = Lexer.tokenizeText(example.raw);
+            let tokens = Tokenizer.tokenizeText(example.raw);
 
             switch (tokens) {
                 case (null) Debug.trap("Failed to tokenize");
@@ -19,6 +24,19 @@ module {
                         };
                         i += 1;
                     };
+                };
+            };
+        };
+    };
+
+    private func failureCases() {
+        for (example in Iter.fromArray(TestData.TokenizingFailureExamples)) {
+            let tokens = Tokenizer.tokenizeText(example.rawXml);
+
+            switch (tokens) {
+                case (?t) Debug.trap("Expected failure but was sucessful.\n\nReason: " #example.reason # "\n\nRaw:\n" # example.rawXml # "\n\nTokens:\n" # debug_show (t));
+                case (null) {
+                    // Expected to fail
                 };
             };
         };

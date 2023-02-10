@@ -1,4 +1,4 @@
-import Lexer "Lexer";
+import Tokenizer "Tokenizer";
 import Types "Types";
 import Iter "mo:base/Iter";
 import Buffer "mo:base/Buffer";
@@ -27,7 +27,19 @@ module {
                     };
                     case (#startTag(tag)) {
                         let root = parseElement(tokens, tag, tag.selfClosing)!;
-                        // TODO check things after root?
+                        // Check for tokens after the root
+                        // Only allow for comments
+                        switch (getNonCommentTokens(tokens)) {
+                            case (null) {
+                                // Valid
+                            };
+                            case (?tokens) {
+                                if (tokens.size() > 0) {
+                                    return null; // Invalid
+                                };
+                            };
+                        };
+
                         return ?{
                             version = version;
                             encoding = encoding;
@@ -37,6 +49,37 @@ module {
                         };
                     };
                     case (t) return null; // Invalid type
+                };
+            };
+        };
+    };
+
+    private func getNonCommentTokens(tokens : Iter.Iter<Types.Token>) : ?[Types.Token] {
+        var buffer : ?Buffer.Buffer<Types.Token> = null;
+        loop {
+            switch (tokens.next()) {
+                case (?#comment(c)) {
+                    // Skip
+                };
+                case (null) {
+                    // Reached end
+                    switch (buffer) {
+                        case (null) return null;
+                        case (?b) return ?Buffer.toArray(b);
+                    };
+                };
+                case (?t) {
+                    let b = switch (buffer) {
+                        // Create buffer if none exists
+                        case (null) {
+                            let b = Buffer.Buffer<Types.Token>(1);
+                            buffer := ?b;
+                            b;
+                        };
+                        case (?b) b;
+                    };
+                    // Add invalid token
+                    b.add(t);
                 };
             };
         };
@@ -74,6 +117,7 @@ module {
                     case t return null; // Invalid type
                 };
             };
+
             return ?{
                 name = startTag.name;
                 attributes = startTag.attributes;

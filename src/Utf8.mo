@@ -142,10 +142,10 @@ module Utf8 {
                     };
 
                     let patternMatched : Bool = isPatternMatched(currentChar);
+                    charBuffer.add(currentChar);
                     if (patternMatched) {
                         break l;
                     };
-                    charBuffer.add(currentChar);
                 };
                 return ?Text.fromIter(charBuffer.vals()); // TODO optimize each char becoming text and concat? Cant find a Buffer<Char> -> Text
             };
