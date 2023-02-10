@@ -1,25 +1,13 @@
-BUILD=build
+.PHONY: check docs test
 
+check:
+	find src -type f -name '*.mo' -print0 | xargs -0 $(shell vessel bin)/moc $(shell vessel sources) --check
 
+all: check-strict docs test
 
-.PHONY: all
-all: test $(BUILD)/Xml.wasm
-
-test: $(BUILD)/Tests.wasm
-	wasmtime ./build/Tests.wasm
-
-$(BUILD)/Tests.wasm: test/Tests.mo make_build_dir install_mops_sources
-	$(shell vessel bin)/moc $(shell mops sources) -wasi-system-api $< -o $@
-
-$(BUILD)/Xml.wasm: src/Xml.mo make_build_dir install_mops_sources
-	$(shell vessel bin)/moc $(shell mops sources) -wasi-system-api $< -o $@
-
-install_mops_sources:
-	mops install
-
-make_build_dir:
-	mkdir -p $(BUILD)
-
-.PHONY: clean
-clean:
-	rm -r ./build/*
+check-strict:
+	find src -type f -name '*.mo' -print0 | xargs -0 $(shell vessel bin)/moc $(shell vessel sources) -Werror --check
+docs:
+	$(shell vessel bin)/mo-doc
+test:
+	make -C test

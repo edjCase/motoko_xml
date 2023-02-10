@@ -13,13 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-
-      - name: Install MOPS
-        run: npm i -g ic-mops
-
       - name: Install Vessel
         run: |
           sudo wget https://github.com/dfinity/vessel/releases/download/v0.6.4/vessel-linux64 -O /usr/bin/vessel
@@ -30,11 +23,8 @@ jobs:
         with:
           wasmtime-version: 4.0.0
 
-      - name: Run Make
-        run: make
+      - name: Check for errors strict
+        run: make check-strict
 
-      - name: Upload Binaries Artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: binaries
-          path: build/
+      - name: Run Tests
+        run: make test
