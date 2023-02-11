@@ -11,22 +11,31 @@ module {
 
     private func successCases() {
         for (example in Iter.fromArray(TestData.examples)) {
-            let doc = Parser.parseDocument(Iter.fromArray(example.tokens));
-
-            if (doc != ?example.doc) {
-                Debug.trap("Invalid document.\n\nExpected:\n" # debug_show (?example.doc) # "\n\nActual:\n" # debug_show (doc));
+            switch (Parser.parseDocument(Iter.fromArray(example.tokens))) {
+                case (#error(e)) {
+                    Debug.trap("Error:\n\n" # debug_show (e));
+                };
+                case (#ok(d)) {
+                    if (d != example.doc) {
+                        Debug.trap("Invalid document.\n\nExpected:\n" # debug_show (example.doc) # "\n\nActual:\n" # debug_show (d));
+                    };
+                };
             };
         };
     };
 
     private func failureCases() {
         for (example in Iter.fromArray(TestData.parsingFailureExamples)) {
-            let doc = Parser.parseDocument(Iter.fromArray(example.tokens));
 
-            switch (doc) {
-                case (?d) Debug.trap("Expected failure but was sucessful.\n\nReason: " #example.reason # "\n\nTokens:\n" # debug_show (example.tokens) # "\n\nDoc:\n" # debug_show (d));
-                case (null) {
-                    // Expected to fail
+            switch (Parser.parseDocument(Iter.fromArray(example.tokens))) {
+                case (#error(e)) {
+                    if (e != example.error) {
+                        Debug.trap("Wrong error.\n\nExpected Error:\n" # debug_show (example.error) # "\n\nActual Error:\n" # debug_show (e));
+                    };
+                    // If matches, passed
+                };
+                case (#ok(d)) {
+                    Debug.trap("Expected failure but was sucessful.\n\nExpected Error: " # debug_show (example.error) # "\n\nTokens:\n" # debug_show (example.tokens) # "\n\nDoc:\n" # debug_show (d));
                 };
             };
         };

@@ -10,12 +10,22 @@ import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
 
 module {
-    public func decode(bytes : Blob) : ?Types.Document {
-        do ? {
-            let tokens : [Types.Token] = Tokenizer.tokenizeBlob(bytes)!;
-            let doc = Parser.parseDocument(Iter.fromArray(tokens))!;
-            Debug.trap(debug_show (doc));
+
+    public type DecodeError = Parser.ParseError or {
+        #tokenizeError : Tokenizer.TokenizeError;
+    };
+
+    public type DecodeResult = {
+        #ok : Types.Document;
+        #error : DecodeError;
+    };
+
+    public func decode(bytes : Blob) : DecodeResult {
+        let tokens : [Types.Token] = switch (Tokenizer.tokenizeBlob(bytes)) {
+            case (#error(e)) return #error(#tokenizeError(e));
+            case (#ok(t)) t;
         };
+        return Parser.parseDocument(Iter.fromArray(tokens));
     };
 
 };

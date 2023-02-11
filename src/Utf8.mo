@@ -64,6 +64,7 @@ module Utf8 {
     public class Reader(iter : Iter.Iter<Char>) {
         var peekCache : ?Char = null;
         var currentValue : ?Char = null;
+        public var position : ?Nat = null;
 
         public func current() : ?Char {
             currentValue;
@@ -77,6 +78,10 @@ module Utf8 {
         };
 
         public func next() : ?Char {
+            position := switch (position) {
+                case (null) ?0;
+                case (?p) ?(p + 1);
+            };
             if (peekCache == null) {
                 iter.next();
             } else {

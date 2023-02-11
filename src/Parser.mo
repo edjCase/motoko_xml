@@ -7,49 +7,62 @@ import Debug "mo:base/Debug";
 
 module {
 
-    public func parseDocument(tokens : Iter.Iter<Types.Token>) : ?Types.Document {
-        do ? {
-            var version : ?Types.Version = null;
-            var encoding : ?Text = null;
-            var standalone : ?Bool = null;
-            let processingInstructions = Buffer.Buffer<Types.ProcessingInstruction>(1);
-            loop {
-                switch (tokens.next()!) {
-                    case (#xmlDeclaration(x)) {
-                        version := ?x.version;
-                        encoding := x.encoding;
-                    };
-                    case (#comment(c)) {
-                        // Skip
-                    };
-                    case (#processingInstruction(p)) {
-                        processingInstructions.add(p);
-                    };
-                    case (#startTag(tag)) {
-                        let root = parseElement(tokens, tag, tag.selfClosing)!;
-                        // Check for tokens after the root
-                        // Only allow for comments
-                        switch (getNonCommentTokens(tokens)) {
-                            case (null) {
-                                // Valid
-                            };
-                            case (?tokens) {
-                                if (tokens.size() > 0) {
-                                    return null; // Invalid
-                                };
-                            };
-                        };
+    public type ParseError = {
+        #unexpectedEndOfTokens;
+        #tokensAfterRoot;
+        #unexpectedToken : Types.Token;
+    };
 
-                        return ?{
-                            version = version;
-                            encoding = encoding;
-                            root = root;
-                            standalone = standalone;
-                            processInstructions = Buffer.toArray(processingInstructions);
+    public type ParseResult<T> = {
+        #ok : T;
+        #error : ParseError;
+    };
+
+    public func parseDocument(tokens : Iter.Iter<Types.Token>) : ParseResult<Types.Document> {
+        var version : ?Types.Version = null;
+        var encoding : ?Text = null;
+        var standalone : ?Bool = null;
+        let processingInstructions = Buffer.Buffer<Types.ProcessingInstruction>(1);
+        loop {
+            switch (tokens.next()) {
+                case (null) return #error(#unexpectedEndOfTokens);
+                case (?#xmlDeclaration(x)) {
+                    version := ?x.version;
+                    encoding := x.encoding;
+                };
+                case (?#comment(c)) {
+                    // Skip
+                };
+                case (?#processingInstruction(p)) {
+                    processingInstructions.add(p);
+                };
+                case (?#startTag(tag)) {
+                    let root = switch (parseElement(tokens, tag, tag.selfClosing)) {
+                        case (#ok(e)) e;
+                        case (#error(e)) return #error(e);
+                    };
+                    // Check for tokens after the root
+                    // Only allow for comments
+                    switch (getNonCommentTokens(tokens)) {
+                        case (null) {
+                            // Valid
+                        };
+                        case (?tokens) {
+                            if (tokens.size() > 0) {
+                                return #error(#tokensAfterRoot);
+                            };
                         };
                     };
-                    case (t) return null; // Invalid type
+
+                    return #ok({
+                        version = version;
+                        encoding = encoding;
+                        root = root;
+                        standalone = standalone;
+                        processInstructions = Buffer.toArray(processingInstructions);
+                    });
                 };
+                case (?t) return #error(#unexpectedToken(t));
             };
         };
     };
@@ -85,44 +98,50 @@ module {
         };
     };
 
-    private func parseElement(tokens : Iter.Iter<Types.Token>, startTag : Types.TagInfo, selfClosing : Bool) : ?Types.Element {
-        do ? {
-            if (selfClosing) {
-                return ?{
-                    name = startTag.name;
-                    attributes = startTag.attributes;
-                    children = #selfClosing;
-                };
-            };
-            let children = Buffer.Buffer<Types.ElementChild>(1);
-            label l loop {
-                switch (tokens.next()!) {
-                    case (#startTag(tag)) {
-                        let inner = parseElement(tokens, tag, tag.selfClosing)!;
-                        children.add(#element(inner));
-                    };
-                    case (#endTag(t)) {
-                        if (t.name != startTag.name) {
-                            Debug.trap(t.name # " " # startTag.name);
-                            return null;
-                        };
-                        break l;
-                    };
-                    case (#text(t)) {
-                        children.add(#text(t));
-                    };
-                    case (#comment(c)) {
-                        children.add(#comment(c));
-                    };
-                    case t return null; // Invalid type
-                };
-            };
-
-            return ?{
+    private func parseElement(
+        tokens : Iter.Iter<Types.Token>,
+        startTag : Types.StartTagInfo,
+        selfClosing : Bool,
+    ) : ParseResult<Types.Element> {
+        if (selfClosing) {
+            return #ok({
                 name = startTag.name;
                 attributes = startTag.attributes;
-                children = #open(Buffer.toArray(children));
+                children = #selfClosing;
+            });
+        };
+        let children = Buffer.Buffer<Types.ElementChild>(1);
+        label l loop {
+            switch (tokens.next()) {
+                case (null) {};
+                case (?#startTag(tag)) {
+                    switch (parseElement(tokens, tag, tag.selfClosing)) {
+                        case (#ok(inner)) {
+                            children.add(#element(inner));
+                        };
+                        case (#error(e)) return #error(e);
+                    };
+                };
+                case (?#endTag(t)) {
+                    if (t.name != startTag.name) {
+                        return #error(#unexpectedToken(#startTag(startTag)));
+                    };
+                    break l;
+                };
+                case (?#text(t)) {
+                    children.add(#text(t));
+                };
+                case (?#comment(c)) {
+                    children.add(#comment(c));
+                };
+                case (?t) return #error(#unexpectedToken(t));
             };
         };
+
+        return #ok({
+            name = startTag.name;
+            attributes = startTag.attributes;
+            children = #open(Buffer.toArray(children));
+        });
     };
 };

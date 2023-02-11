@@ -1,4 +1,7 @@
 import Types "../src/Types";
+import Tokenizer "../src/Tokenizer";
+import Parser "../src/Parser";
+
 module {
 
     public type Example = {
@@ -15,6 +18,29 @@ module {
                     name = "root";
                     selfClosing = false;
                 }),
+                #endTag({ name = "root" }),
+            ];
+            doc = {
+                encoding = null;
+                processInstructions = [];
+                root = {
+                    attributes = [];
+                    children = #open([]);
+                    name = "root";
+                };
+                standalone = null;
+                version = null;
+            };
+        },
+        {
+            raw = "<root>&lt;&gt;</root>";
+            tokens = [
+                #startTag({
+                    attributes = [];
+                    name = "root";
+                    selfClosing = false;
+                }),
+                #text("<>"),
                 #endTag({ name = "root" }),
             ];
             doc = {
@@ -1456,37 +1482,37 @@ module {
     ];
 
     public type TokenizingFailExample = {
-        reason : Text;
+        error : Tokenizer.TokenizeError;
         rawXml : Text;
     };
 
     public let TokenizingFailureExamples : [TokenizingFailExample] = [
         {
-            reason = "Bad opening tag, < and > are only allowed for tags";
+            error = { message = ""; characterIndex = null };
             rawXml = "root></root>";
         },
         {
-            reason = "Bad text, < and > are only allowed for tags";
+            error = { message = ""; characterIndex = null };
             rawXml = "<root><</root>";
         },
         {
-            reason = "Bad text, < and > are only allowed for tags";
+            error = { message = ""; characterIndex = null };
             rawXml = "<root>></root>";
         },
         {
-            reason = "Invalid xml declaration";
+            error = { message = ""; characterIndex = null };
             rawXml = "<?xml><root></root>";
         },
     ];
 
     public type ParsingFailExample = {
-        reason : Text;
+        error : Parser.ParseError;
         tokens : [Types.Token];
     };
 
     public let parsingFailureExamples : [ParsingFailExample] = [
         {
-            reason = "Multiple roots";
+            error = #unexpectedToken(#startTag({ attributes = []; name = "root2"; selfClosing = false }));
             tokens = [
                 #startTag({
                     attributes = [];
@@ -1503,11 +1529,11 @@ module {
             ];
         },
         {
-            reason = "No root";
+            error = #unexpectedEndOfTokens;
             tokens = [];
         },
         {
-            reason = "No root";
+            error = #unexpectedEndOfTokens;
             tokens = [
                 #xmlDeclaration({
                     encoding = null;

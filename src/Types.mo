@@ -37,6 +37,8 @@ module {
         attributes : [Attribute];
     };
 
+    public type StartTagInfo = TagInfo and { selfClosing : Bool };
+
     public type Version = { major : Nat; minor : Nat };
 
     public type XmlDeclaration = {
@@ -46,7 +48,7 @@ module {
     };
 
     public type Token = {
-        #startTag : TagInfo and { selfClosing : Bool };
+        #startTag : StartTagInfo;
         #endTag : { name : Text };
         #text : Text;
         #comment : Text;
