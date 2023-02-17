@@ -8,6 +8,7 @@ import Types "Types";
 import Nat "mo:base/Nat";
 import NatX "mo:xtended-numbers/NatX";
 import Prelude "mo:base/Prelude";
+import Array "mo:base/Array";
 
 // TODO escape & < > ' "
 // TODO <![CDATA[ ]]> escapes whats inside
@@ -68,7 +69,10 @@ module {
                     // or return the text value that has built up
                     if (c == '<') {
                         let token = if (charBuffer.size() > 0) {
-                            let textValue = Text.fromIter(charBuffer.vals());
+                            let textValue = switch (decodeTextValue(charBuffer)) {
+                                case (#error(e)) return #error(e);
+                                case (#ok(v)) v;
+                            };
                             #text(textValue);
                         } else {
                             switch (parseTagToken(reader)) {
@@ -93,6 +97,67 @@ module {
                 };
             };
         };
+    };
+
+    private func decodeTextValue(buffer : Buffer.Buffer<Char>) : Result<Text> {
+        let decodedTextBuffer = Buffer.Buffer<Char>(buffer.size());
+        let unicodeBuffer = Buffer.Buffer<Char>(4);
+        var inAmp = false;
+        for (c in buffer.vals()) {
+            if (inAmp) {
+                if (c == ';') {
+                    inAmp := false;
+                    let decodedChar = switch (getUnicodeValue(Text.fromIter(unicodeBuffer.vals()))) {
+                        case (#error(e)) return #error(e);
+                        case (#ok(c)) c;
+                    };
+                    unicodeBuffer.clear();
+                    decodedTextBuffer.add(decodedChar);
+                } else {
+                    unicodeBuffer.add(c);
+                };
+            } else {
+                if (c == '&') {
+                    inAmp := true;
+                } else {
+                    decodedTextBuffer.add(c);
+                };
+            };
+        };
+        #ok(Text.fromIter(buffer.vals()));
+    };
+
+    private func getUnicodeValue(escapedValue : Text) : Result<Char> {
+        let iter = escapedValue.chars();
+        let value : Char = switch (iter.next()) {
+            case (null) return #error({
+                message = "Invalid entity reference '" # escapedValue # "'";
+                characterIndex = null;
+            });
+            case (?'%') Prelude.nyi(); // TODO parameters?
+            case (?'#') {
+                let unicodeValue = Text.fromIter(iter);
+                if (Text.startsWith(unicodeValue, #char('x'))) {
+                    // Text.fromUnicode(unicodeValue);
+                    // TODO
+                    'c';
+                } else {
+                    // Text.fromUnicode(unicodeValue);
+                    // TODO
+                    'c';
+                };
+            };
+            case (?c) {
+                switch (Text.fromIter(iter)) {
+                    case ("lt") '<';
+                    case ("gt") '>';
+                    case ("apos") '\'';
+                    case ("quot") '\u{22}';
+                    case (_) Prelude.nyi(); // TODO custom entities
+                };
+            };
+        };
+        #ok(value);
     };
 
     private func getTagInfo(t : Text, startPosition : Nat) : Result<Types.TagInfo> {
@@ -194,7 +259,10 @@ module {
 
     private func parseTagToken(reader : Utf8.Reader) : Result<Types.Token> {
         let startPosition = switch (reader.position) {
-            case (null) Prelude.unreachable();
+            case (null) {
+                let _ = reader.next();
+                0;
+            };
             case (?p) p;
         };
         let tagValue : Text = switch (reader.readUntil(#char('>'), true)) {

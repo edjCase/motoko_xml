@@ -48,7 +48,7 @@ module {
                 processInstructions = [];
                 root = {
                     attributes = [];
-                    children = #open([]);
+                    children = #open([#text("<>")]);
                     name = "root";
                 };
                 standalone = null;
@@ -1512,7 +1512,7 @@ module {
 
     public let parsingFailureExamples : [ParsingFailExample] = [
         {
-            error = #unexpectedToken(#startTag({ attributes = []; name = "root2"; selfClosing = false }));
+            error = #tokensAfterRoot;
             tokens = [
                 #startTag({
                     attributes = [];

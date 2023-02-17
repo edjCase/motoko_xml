@@ -1,3 +1,10 @@
+# TODO
+CDATA
+ELEMENT
+ATTRLIST
+ENTITY
+NOTATION
+
 # Overview
 
 This is a library that extends on the Motoko base library for numbers. Maily focuses on encoding of numbers and 16/32 bit precision floats

@@ -17,7 +17,7 @@ module {
                 };
                 case (#ok(d)) {
                     if (d != example.doc) {
-                        Debug.trap("Invalid document.\n\nExpected:\n" # debug_show (example.doc) # "\n\nActual:\n" # debug_show (d));
+                        Debug.trap("Invalid document.\n\nExpected:\n" # debug_show (example.doc) # "\n\nActual:\n" # debug_show (d) # "\n\nTokens: " # debug_show (example.tokens));
                     };
                 };
             };
