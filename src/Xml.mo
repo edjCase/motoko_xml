@@ -12,7 +12,7 @@ import Debug "mo:base/Debug";
 module {
 
     public type DecodeError = Parser.ParseError or {
-        #tokenizeError : Tokenizer.TokenizeError;
+        #tokenizeError : Text;
     };
 
     public type DecodeResult = {

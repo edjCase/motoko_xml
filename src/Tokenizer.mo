@@ -9,6 +9,7 @@ import Nat "mo:base/Nat";
 import NatX "mo:xtended-numbers/NatX";
 import Prelude "mo:base/Prelude";
 import Array "mo:base/Array";
+import Nat32 "mo:base/Nat32";
 
 // TODO escape & < > ' "
 // TODO <![CDATA[ ]]> escapes whats inside
@@ -17,12 +18,7 @@ module {
 
     public let UNEXPECTED_ERROR_MESSAGE = "Unexpected end of characters";
 
-    public type TokenizeError = {
-        message : Text;
-        characterIndex : ?Nat;
-    };
-
-    type Result<T> = { #ok : T; #error : TokenizeError };
+    type Result<T> = { #ok : T; #error : Text };
 
     public type TokenizeResult = Result<[Types.Token]>;
 
@@ -85,10 +81,7 @@ module {
                         switch (c) {
                             // < and > are only allowed in the context of tags
                             // must be escaped for text
-                            case ('>') return #error({
-                                message = "Invalid token '>'";
-                                characterIndex = null;
-                            });
+                            case ('>') return #error("Unexpected character '>'");
                             case (_)(); // Skip
                         };
                         charBuffer.add(c);
@@ -101,73 +94,98 @@ module {
 
     private func decodeTextValue(buffer : Buffer.Buffer<Char>) : Result<Text> {
         let decodedTextBuffer = Buffer.Buffer<Char>(buffer.size());
-        let unicodeBuffer = Buffer.Buffer<Char>(4);
+        let referenceValueBuffer = Buffer.Buffer<Char>(4);
         var inAmp = false;
         for (c in buffer.vals()) {
+            // If characters are between & and ; then they are a reference
+            // to a value. This does the translation if it can
             if (inAmp) {
                 if (c == ';') {
                     inAmp := false;
-                    let decodedChar = switch (getUnicodeValue(Text.fromIter(unicodeBuffer.vals()))) {
+                    // Decode the value and write it to the text buffer
+                    switch (writeEntityValue(referenceValueBuffer, decodedTextBuffer)) {
+                        case (#ok)();
                         case (#error(e)) return #error(e);
-                        case (#ok(c)) c;
                     };
-                    unicodeBuffer.clear();
-                    decodedTextBuffer.add(decodedChar);
+                    // Clear character buffer and continue iterating
+                    referenceValueBuffer.clear();
                 } else {
-                    unicodeBuffer.add(c);
+                    // Add to the character buffer if between & and ;
+                    referenceValueBuffer.add(c);
                 };
             } else {
                 if (c == '&') {
                     inAmp := true;
                 } else {
+                    // Add regular character
                     decodedTextBuffer.add(c);
                 };
             };
         };
-        #ok(Text.fromIter(buffer.vals()));
+        if (inAmp) {
+            return #error("Unexpected character '&'");
+        };
+        #ok(Text.fromIter(decodedTextBuffer.vals()));
     };
 
-    private func getUnicodeValue(escapedValue : Text) : Result<Char> {
-        let iter = escapedValue.chars();
-        let value : Char = switch (iter.next()) {
-            case (null) return #error({
-                message = "Invalid entity reference '" # escapedValue # "'";
-                characterIndex = null;
-            });
-            case (?'%') Prelude.nyi(); // TODO parameters?
-            case (?'#') {
-                let unicodeValue = Text.fromIter(iter);
-                if (Text.startsWith(unicodeValue, #char('x'))) {
-                    // Text.fromUnicode(unicodeValue);
-                    // TODO
-                    'c';
+    private func writeEntityValue(escapedValue : Buffer.Buffer<Char>, decodedTextBuffer : Buffer.Buffer<Char>) : Result<()> {
+        // If starts with a #, its a unicode character
+        switch (escapedValue.get(0)) {
+            case ('#') {
+                // # means its a unicode value
+                let unicodeScalar : ?Nat = if (escapedValue.get(1) == 'x') {
+                    // If prefixed with x, it is a hex value
+                    let hexBuffer = Buffer.subBuffer<Char>(escapedValue, 2, escapedValue.size() - 2);
+                    let hex = Text.fromIter(hexBuffer.vals());
+                    NatX.fromTextAdvanced(hex, #hexadecimal, null); // Parse hexadecimal
                 } else {
-                    // Text.fromUnicode(unicodeValue);
-                    // TODO
-                    'c';
+                    // Otherwise its a decimal value
+                    let decimalBuffer = Buffer.subBuffer<Char>(escapedValue, 1, escapedValue.size() - 1);
+                    let decimal = Text.fromIter(decimalBuffer.vals());
+                    NatX.fromText(decimal); // Parse decimal
+                };
+                switch (unicodeScalar) {
+                    case (null) return #error("Invalid unicode value '" # Text.fromIter(escapedValue.vals()) # "'");
+                    case (?s) {
+                        // Must fit in a nat32
+                        if (s > 4294967295) {
+                            return #error("Invalid unicode value '" # Text.fromIter(escapedValue.vals()) # "'");
+                        };
+                        // Convert unicode id to a unicode character
+                        let unicodeCharacter = Char.fromNat32(Nat32.fromNat(s));
+                        decodedTextBuffer.add(unicodeCharacter);
+                        #ok;
+                    };
                 };
             };
-            case (?c) {
-                switch (Text.fromIter(iter)) {
+            case ('%') {
+                Prelude.nyi(); // TODO parameters?
+            };
+            case (_) {
+                let c = switch (Text.fromIter(escapedValue.vals())) {
                     case ("lt") '<';
                     case ("gt") '>';
                     case ("apos") '\'';
                     case ("quot") '\u{22}';
-                    case (_) Prelude.nyi(); // TODO custom entities
+                    case (entityId) {
+                        // TODO custom entities. This just returns the original value
+                        decodedTextBuffer.add('&');
+                        decodedTextBuffer.append(escapedValue);
+                        decodedTextBuffer.add(';');
+                        return #ok;
+                    };
                 };
+                decodedTextBuffer.add(c);
+                #ok;
             };
         };
-        #ok(value);
     };
 
-    private func getTagInfo(t : Text, startPosition : Nat) : Result<Types.TagInfo> {
-        let tagTokens : Iter.Iter<Result<Text>> = TagTokenIterator(t, startPosition);
+    private func getTagInfo(t : Text) : Result<Types.TagInfo> {
+        let tagTokens : Iter.Iter<Result<Text>> = TagTokenIterator(t);
 
         let name : Text = switch (tagTokens.next()) {
-            case (null) return #error({
-                message = UNEXPECTED_ERROR_MESSAGE;
-                characterIndex = null;
-            });
+            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
             case (?t) switch (t) {
                 case (#error(e)) return #error(e);
                 case (#ok(t)) t;
@@ -187,10 +205,7 @@ module {
                 case (?#ok(t)) {
                     let kvComponents = Text.split(t, #char('='));
                     let name = switch (kvComponents.next()) {
-                        case (null) return #error({
-                            message = UNEXPECTED_ERROR_MESSAGE;
-                            characterIndex = null;
-                        });
+                        case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                         case (?n) n;
                     };
 
@@ -212,9 +227,8 @@ module {
         });
     };
 
-    private class TagTokenIterator(t : Text, startPosition : Nat) : Iter.Iter<Result<Text>> {
+    private class TagTokenIterator(t : Text) : Iter.Iter<Result<Text>> {
         let charIter = Text.toIter(t);
-        var position = startPosition;
 
         public func next() : ?Result<Text> {
             let charBuffer = Buffer.Buffer<Char>(3);
@@ -229,10 +243,7 @@ module {
                             inQuotes := not inQuotes;
                         } else if (c == '<' or c == '>') {
                             // Only allowed as tag start/end
-                            return ?#error({
-                                message = "Invalid token '" # Text.fromChar(c) # "'";
-                                characterIndex = ?position;
-                            });
+                            return ?#error("Unexpected character '" # Text.fromChar(c) # "'");
                         } else {
                             if (not inQuotes) {
                                 if (Utf8.isWhitespace(c)) {
@@ -241,7 +252,6 @@ module {
                             };
                             charBuffer.add(c);
                         };
-                        position += 1;
                     };
                 };
             };
@@ -258,27 +268,14 @@ module {
     };
 
     private func parseTagToken(reader : Utf8.Reader) : Result<Types.Token> {
-        let startPosition = switch (reader.position) {
-            case (null) {
-                let _ = reader.next();
-                0;
-            };
-            case (?p) p;
-        };
         let tagValue : Text = switch (reader.readUntil(#char('>'), true)) {
-            case (null) return #error({
-                message = UNEXPECTED_ERROR_MESSAGE;
-                characterIndex = null;
-            });
+            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
             case (?v) {
                 let tagValue : Text = Text.trim(Text.trim(v, #char('>')), #char('<'));
 
                 if (Nat.sub(v.size(), tagValue.size()) > 2) {
-                    // Invalid, more that just one < at the beginnin
-                    return #error({
-                        message = "Invalid character '<'";
-                        characterIndex = ?startPosition;
-                    });
+                    // Invalid, more that just one < at the beginning
+                    return #error("Unexpected character '<'");
                 };
                 tagValue;
             };
@@ -291,7 +288,7 @@ module {
         } else if (Text.startsWith(tagValue, #text("!--"))) {
             #comment(Text.trim(Text.trim(tagValue, #text("!")), #text("--")));
         } else if (Text.startsWith(tagValue, #char('?'))) {
-            let tagInfo : Types.TagInfo = switch (getTagInfo(Text.trim(tagValue, #char('?')), startPosition)) {
+            let tagInfo : Types.TagInfo = switch (getTagInfo(Text.trim(tagValue, #char('?')))) {
                 case (#error(e)) return #error(e);
                 case (#ok(t)) t;
             };
@@ -308,33 +305,21 @@ module {
                             };
                             case "version" {
                                 let versionString = switch (attr.value) {
-                                    case (null) return #error({
-                                        message = "Version attribute specified with no value specified";
-                                        characterIndex = null;
-                                    });
+                                    case (null) return #error("Version attribute specified with no value specified");
                                     case (?v) v;
                                 };
                                 let versionComponents = Text.split(versionString, #char('.'));
                                 major := switch (versionComponents.next()) {
-                                    case (null) return #error({
-                                        message = "Version attribute specified with no value specified";
-                                        characterIndex = null;
-                                    });
+                                    case (null) return #error("Version attribute specified with no value specified");
                                     case (?major) switch (fromText(major)) {
-                                        case (null) return #error({
-                                            message = "Invalid version number '" # versionString # "'";
-                                            characterIndex = null;
-                                        });
+                                        case (null) return #error("Invalid version number '" # versionString # "'");
                                         case (?m) m;
                                     };
                                 };
                                 minor := switch (versionComponents.next()) {
                                     case (null) 0; // Skip, use default
                                     case (?minor) switch (fromText(minor)) {
-                                        case (null) return #error({
-                                            message = "Invalid version number '" # versionString # "'";
-                                            characterIndex = null;
-                                        });
+                                        case (null) return #error("Invalid version number '" # versionString # "'");
                                         case (?m) m;
                                     };
                                 };
@@ -360,7 +345,7 @@ module {
 
             let isSelfClosing = trimmedTagValue.size() != tagValue.size(); // Check to see if the / was removed, if it was, then self closing
 
-            let tagInfo : Types.TagInfo = switch (getTagInfo(trimmedTagValue, startPosition)) {
+            let tagInfo : Types.TagInfo = switch (getTagInfo(trimmedTagValue)) {
                 case (#error(e)) return #error(e);
                 case (#ok(t)) t;
             };

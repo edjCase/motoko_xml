@@ -1,6 +1,6 @@
 [dependencies]
-base = "0.7.4"
-xtended-numbers = "0.1.1"
+base = "0.8.1"
+xtended-numbers = "0.2.0"
 
 [package]
 name = "xml"

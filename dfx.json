@@ -4,7 +4,7 @@
   "canisters": {},
   "defaults": {
     "build": {
-      "packtool": "vessel sources",
+      "packtool": "mops sources",
       "args": ""
     }
   }

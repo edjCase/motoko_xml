@@ -1482,26 +1482,26 @@ module {
     ];
 
     public type TokenizingFailExample = {
-        error : Tokenizer.TokenizeError;
+        error : Text;
         rawXml : Text;
     };
 
     public let TokenizingFailureExamples : [TokenizingFailExample] = [
         {
-            error = { message = ""; characterIndex = null };
+            error = "Unexpected character '>'";
             rawXml = "root></root>";
         },
         {
-            error = { message = ""; characterIndex = null };
+            error = "Unexpected character '<'";
             rawXml = "<root><</root>";
         },
         {
-            error = { message = ""; characterIndex = null };
+            error = "Unexpected character '>'";
             rawXml = "<root>></root>";
         },
         {
-            error = { message = ""; characterIndex = null };
-            rawXml = "<?xml><root></root>";
+            error = "Unexpected character '&'";
+            rawXml = "<root>&</root>";
         },
     ];
 

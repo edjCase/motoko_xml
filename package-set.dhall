@@ -8,13 +8,13 @@ let
     [
       {
          name = "xtended-numbers"
-         , version = "v1.0.2"
+         , version = "v1.1.0"
          , repo = "https://github.com/edjcase/motoko_numbers"
          , dependencies = [] : List Text
       },
       {
          name = "base"
-         , version = "moc-0.7.4"
+         , version = "moc-0.8.1"
          , repo = "https://github.com/dfinity/motoko-base"
          , dependencies = [] : List Text
       }
