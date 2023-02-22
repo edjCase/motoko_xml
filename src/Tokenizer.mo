@@ -10,9 +10,7 @@ import NatX "mo:xtended-numbers/NatX";
 import Prelude "mo:base/Prelude";
 import Array "mo:base/Array";
 import Nat32 "mo:base/Nat32";
-
-// TODO escape & < > ' "
-// TODO <![CDATA[ ]]> escapes whats inside
+import TextX "mo:xtended-text/TextX";
 
 module {
 
@@ -268,105 +266,121 @@ module {
     };
 
     private func parseTagToken(reader : Utf8.Reader) : Result<Types.Token> {
-        let tagValue : Text = switch (reader.readUntil(#char('>'), true)) {
-            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?v) {
-                let tagValue : Text = Text.trim(Text.trim(v, #char('>')), #char('<'));
+        TextX.slice(#iter(reader), 0, null).matchAndMapSlice<Types.Token>(
+            [
+                {
+                    startsWith = #text("<!--");
+                    endsWith = #text("-->");
+                    trimMatch = false;
+                    strictStart = true;
+                    map = func(slice : TextX.TextSlice) : Types.Token {
+                        "Comment";
+                    };
+                },
+                {
+                    startsWith = #text("<?");
+                    endsWith = #text("?>");
+                    trimMatch = false;
+                    strictStart = true;
+                    map = func(slice : TextX.TextSlice) : Types.Token {
+                        "Q";
+                    };
+                },
+            ],
+            parseStartTag,
+        );
+        switch (tag) {
+            case (null) #error(UNEXPECTED_ERROR_MESSAGE);
+            case (?t) #ok(t);
+        };
+    };
 
-                if (Nat.sub(v.size(), tagValue.size()) > 2) {
-                    // Invalid, more that just one < at the beginning
-                    return #error("Unexpected character '<'");
-                };
-                tagValue;
-            };
+    private func parseEndTag(slice : TextX.TextSlice) : Types.Token {
+        #endTag({
+            name = Text.trim(Text.trimStart(tagValue, #char('/')), #char(' ')); // TODO trim all whitespace
+        });
+    };
+
+    private func parseComment(slice : TextX.TextSlice) : Types.Token {
+        #comment(Text.trim(Text.trim(tagValue, #text("!")), #text("--")));
+    };
+
+    private func parseCDATA(slice : TextX.TextSlice) : Types.Token {
+        let text = Text.trimEnd(Text.trimStart(tagValue, #text("![CDATA[")), #text("]]"));
+        #text(text);
+    };
+
+    private func parseStartTag(slice : TextX.TextSlice) : Types.Token {
+        let trimmedTagValue = Text.trimEnd(tagValue, #char('/'));
+
+        let isSelfClosing = trimmedTagValue.size() != tagValue.size(); // Check to see if the / was removed, if it was, then self closing
+
+        let tagInfo : Types.TagInfo = switch (getTagInfo(trimmedTagValue)) {
+            case (#error(e)) return #error(e);
+            case (#ok(t)) t;
         };
 
-        let token = if (Text.startsWith(tagValue, #char('/'))) {
-            #endTag({
-                name = Text.trim(Text.trimStart(tagValue, #char('/')), #char(' ')); // TODO trim all whitespace
-            });
-        } else if (Text.startsWith(tagValue, #text("!--"))) {
-            #comment(Text.trim(Text.trim(tagValue, #text("!")), #text("--")));
-        } else if (Text.startsWith(tagValue, #char('?'))) {
-            let tagInfo : Types.TagInfo = switch (getTagInfo(Text.trim(tagValue, #char('?')))) {
-                case (#error(e)) return #error(e);
-                case (#ok(t)) t;
-            };
-            switch (toLower(tagInfo.name)) {
-                case "xml" {
-                    var encoding : ?Text = null;
-                    var major : Nat = 1;
-                    var minor : Nat = 0;
-                    var standalone : ?Bool = null;
-                    for (attr in Iter.fromArray(tagInfo.attributes)) {
-                        switch (toLower(attr.name)) {
-                            case "encoding" {
-                                encoding := attr.value;
-                            };
-                            case "version" {
-                                let versionString = switch (attr.value) {
-                                    case (null) return #error("Version attribute specified with no value specified");
-                                    case (?v) v;
-                                };
-                                let versionComponents = Text.split(versionString, #char('.'));
-                                major := switch (versionComponents.next()) {
-                                    case (null) return #error("Version attribute specified with no value specified");
-                                    case (?major) switch (fromText(major)) {
-                                        case (null) return #error("Invalid version number '" # versionString # "'");
-                                        case (?m) m;
-                                    };
-                                };
-                                minor := switch (versionComponents.next()) {
-                                    case (null) 0; // Skip, use default
-                                    case (?minor) switch (fromText(minor)) {
-                                        case (null) return #error("Invalid version number '" # versionString # "'");
-                                        case (?m) m;
-                                    };
-                                };
+        #startTag({
+            tagInfo with selfClosing = isSelfClosing
+        });
+    };
 
-                            };
-                            case _ {}; // Skip unknown attributes
+    private func parseQ(slice : TextX.TextSlice) : Types.Token {
+        let tagValue = reader.readUntil(#char('>'), true)!;
+        let tagInfo : Types.TagInfo = switch (getTagInfo(Text.trim(tagValue, #char('?')))) {
+            case (#error(e)) return #error(e);
+            case (#ok(t)) t;
+        };
+        switch (toLower(tagInfo.name)) {
+            case "xml" {
+                var encoding : ?Text = null;
+                var major : Nat = 1;
+                var minor : Nat = 0;
+                var standalone : ?Bool = null;
+                for (attr in Iter.fromArray(tagInfo.attributes)) {
+                    switch (toLower(attr.name)) {
+                        case "encoding" {
+                            encoding := attr.value;
                         };
+                        case "version" {
+                            let versionString = switch (attr.value) {
+                                case (null) return #error("Version attribute specified with no value specified");
+                                case (?v) v;
+                            };
+                            let versionComponents = Text.split(versionString, #char('.'));
+                            major := switch (versionComponents.next()) {
+                                case (null) return #error("Version attribute specified with no value specified");
+                                case (?major) switch (fromText(major)) {
+                                    case (null) return #error("Invalid version number '" # versionString # "'");
+                                    case (?m) m;
+                                };
+                            };
+                            minor := switch (versionComponents.next()) {
+                                case (null) 0; // Skip, use default
+                                case (?minor) switch (fromText(minor)) {
+                                    case (null) return #error("Invalid version number '" # versionString # "'");
+                                    case (?m) m;
+                                };
+                            };
+
+                        };
+                        case _ {}; // Skip unknown attributes
                     };
-                    #xmlDeclaration({
-                        encoding = encoding;
-                        version = { major; minor };
-                        standalone = standalone;
-                    });
                 };
-                case _ #processingInstruction({
-                    attributes = tagInfo.attributes;
-                    target = tagInfo.name;
+                #xmlDeclaration({
+                    encoding = encoding;
+                    version = { major; minor };
+                    standalone = standalone;
                 });
             };
-
-        } else {
-            let trimmedTagValue = Text.trimEnd(tagValue, #char('/'));
-
-            let isSelfClosing = trimmedTagValue.size() != tagValue.size(); // Check to see if the / was removed, if it was, then self closing
-
-            let tagInfo : Types.TagInfo = switch (getTagInfo(trimmedTagValue)) {
-                case (#error(e)) return #error(e);
-                case (#ok(t)) t;
-            };
-
-            #startTag({
-                tagInfo with selfClosing = isSelfClosing
+            case _ #processingInstruction({
+                attributes = tagInfo.attributes;
+                target = tagInfo.name;
             });
         };
-        #ok(token);
     };
 
     private func toLower(text : Text) : Text {
         text; // TODO
-    };
-
-    private func fromText(value : Text) : ?Nat {
-        // TODO
-        switch (value) {
-            case "0" ?0;
-            case "1" ?1;
-            case _ Debug.trap("Unrecognized number");
-        };
     };
 };

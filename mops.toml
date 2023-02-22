@@ -1,9 +1,13 @@
 [dependencies]
 base = "0.8.1"
 xtended-numbers = "0.2.0"
+xtended-text = "../motoko_text"
 
 [package]
 name = "xml"
 version = "0.1.0"
 description = "A library for encoding and decoding XML"
 repository = "https://github.com/edjcase/motoko_xml"
+
+[dev-dependencies]
+test = "1.0.1"
