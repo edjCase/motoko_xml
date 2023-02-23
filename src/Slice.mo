@@ -2,6 +2,7 @@ import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
+import Array "mo:base/Array";
 module Slice {
 
     public type Sequence<T> = {
@@ -10,6 +11,7 @@ module Slice {
         #slice : Slice<T>;
     };
 
+    // TODO try to switch to a non allocating slice
     public class Slice<T>(
         sequence : Sequence<T>,
         comparer : (T, T) -> Bool,
@@ -62,8 +64,24 @@ module Slice {
             calculatedSliceLength;
         };
 
-        public func indexOf(subset : Sequence<T>) : ?Nat {
+        public func indexOfSequence(subset : Sequence<T>) : ?Nat {
             indexOfInternal(subset, false);
+        };
+
+        public func indexOf(item : T) : ?Nat {
+            switch (sequence) {
+                case (#array(a)) {
+                    // iterate through the array and find the first index
+                    label f for (i in Iter.range(0, a.size() - 1)) {
+                        if (comparer(a[i], item)) {
+                            return ?i;
+                        };
+                    };
+                    null;
+                };
+                case (#buffer(b)) Buffer.indexOf(item, b, comparer);
+                case (#slice(s)) s.indexOf(item);
+            };
         };
 
         public func trimSingle(value : T) : Slice<T> {

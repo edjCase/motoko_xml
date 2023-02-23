@@ -35,9 +35,13 @@ module {
             innerSlice.get(index);
         };
 
-        public func indexOf(subset : Sequence) : ?Nat {
+        public func indexOf(value : Char) : ?Nat {
+            innerSlice.indexOf(value);
+        };
+
+        public func indexOfSequence(subset : Sequence) : ?Nat {
             let innerSubset : Slice.Sequence<Char> = mapSequence(subset);
-            innerSlice.indexOf(innerSubset);
+            innerSlice.indexOfSequence(innerSubset);
         };
 
         public func trimSingle(value : Char) : TextSlice {

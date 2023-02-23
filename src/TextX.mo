@@ -7,10 +7,23 @@ import NatX "mo:xtended-numbers/NatX";
 import Debug "mo:base/Debug";
 import Slice "Slice";
 import Array "mo:base/Array";
+import CharX "CharX";
 
 module TextX {
     public func toLower(text : Text) : Text {
-        text; // TODO
+        let buffer = Buffer.Buffer<Char>(text.size());
+        for (char in text.chars()) {
+            buffer.add(CharX.toLower(char));
+        };
+        return Text.fromIter(buffer.vals());
+    };
+
+    public func toUpper(text : Text) : Text {
+        let buffer = Buffer.Buffer<Char>(text.size());
+        for (char in text.chars()) {
+            buffer.add(CharX.toUpper(char));
+        };
+        return Text.fromIter(buffer.vals());
     };
 
     public func fromUtf8Bytes(bytes : Iter.Iter<Nat8>) : Iter.Iter<Char> {

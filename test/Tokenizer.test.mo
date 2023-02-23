@@ -31,7 +31,7 @@ for (example in Iter.fromArray(TestData.examples)) {
 for (example in Iter.fromArray(TestData.TokenizingFailureExamples)) {
 
     test(
-        "Tokenizer should succeed with xml: " # example.rawXml,
+        "Tokenizer should faile with xml: " # example.rawXml,
         func() {
             switch (Tokenizer.tokenizeText(example.rawXml)) {
                 case (#ok(tokens)) Debug.trap("Expected failure but was sucessful.\n\nExpectedError: " # debug_show (example.error) # "\n\nRaw:\n" # example.rawXml # "\n\nTokens:\n" # debug_show (tokens));
@@ -39,7 +39,7 @@ for (example in Iter.fromArray(TestData.TokenizingFailureExamples)) {
                     if (e != example.error) {
                         Debug.trap("Wrong error.\n\nExpected Error:\n" # debug_show (example.error) # "\n\nActual Error:\n" # debug_show (e));
                     };
-                    // If matches, passed
+                    // If error matches, passed
                 };
             };
         },

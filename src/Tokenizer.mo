@@ -78,7 +78,7 @@ module {
                                 case (#ok(t)) t;
                             };
                         };
-                        Debug.print("C " # debug_show (token));
+
                         return #ok(token);
                     } else {
                         switch (c) {
@@ -228,7 +228,7 @@ module {
     };
 
     private func splitAttribute(slice : TextSlice.TextSlice) : ?(Text, ?Text) {
-        switch (slice.indexOf(#text("="))) {
+        switch (slice.indexOfSequence(#text("="))) {
             case (null) {
                 // No equals sign, so just the name with no value
                 ?(slice.toText(), null);
@@ -243,85 +243,100 @@ module {
         };
     };
 
-    private class TagTokenIterator(tagSlice : TextSlice.TextSlice) : Iter.Iter<Result<TextSlice.TextSlice>> {
-        let charIter = tagSlice.toIter();
-        var lastStartIndex : Nat = 0;
-        var nextIndex = 0;
-
-        public func next() : ?Result<TextSlice.TextSlice> {
-            var inQuotes = false;
-
-            loop {
-                switch (charIter.next()) {
-                    case (null) return buildSlice(false);
-                    case (?c) {
-                        nextIndex := nextIndex + 1;
-                        // '\u{22}' instead of '\"'. There is a parsing bug
-                        if (c == '\u{22}') {
-                            inQuotes := not inQuotes;
-                        } else if (c == '<' or c == '>') {
-                            // Only allowed as tag start/end
-                            return ?#error("Unexpected character '" # Text.fromChar(c) # "'");
-                        } else {
-                            if (not inQuotes) {
-                                if (Char.isWhitespace(c)) {
-                                    return buildSlice(true);
-                                };
-                            };
-                        };
-                    };
-                };
-            };
-        };
-
-        private func buildSlice(isWhitespace : Bool) : ?Result<TextSlice.TextSlice> {
-            if (lastStartIndex == nextIndex) {
-                return null;
-            };
-            let offset = if (isWhitespace) 1 else 0; // Remove whitespace
-            let result = ?#ok(tagSlice.slice(lastStartIndex, ?(nextIndex - lastStartIndex - offset)));
-
-            lastStartIndex := nextIndex;
-            result;
-        };
-    };
-
     private func parseTagToken(reader : IterX.IterReader<Char>) : Result<Types.Token> {
         matchAndParseSlice(
             reader,
             [
                 {
+                    startsWith = TextSlice.fromText("</");
+                    endsWith = TextSlice.fromText(">");
+                    parse = parseEndTag;
+                },
+                {
                     startsWith = TextSlice.fromText("<!--");
                     endsWith = TextSlice.fromText("-->");
-                    trimMatch = true;
                     parse = parseComment;
                 },
                 {
                     startsWith = TextSlice.fromText("<?");
                     endsWith = TextSlice.fromText("?>");
-                    trimMatch = true;
                     parse = parseQ;
                 },
                 {
                     startsWith = TextSlice.fromText("<![CDATA[");
                     endsWith = TextSlice.fromText("]]>");
-                    trimMatch = true;
                     parse = parseCDATA;
                 },
                 {
-                    startsWith = TextSlice.fromText("</");
+                    startsWith = TextSlice.fromText("<!");
                     endsWith = TextSlice.fromText(">");
-                    trimMatch = true;
-                    parse = parseEndTag;
+                    parse = parseBang;
                 },
                 {
                     startsWith = TextSlice.fromText("<");
                     endsWith = TextSlice.fromText(">");
-                    trimMatch = true;
                     parse = parseStartTag;
                 },
             ],
         );
+    };
+
+    private func parseBang(slice : TextSlice.TextSlice) : Result<Types.Token> {
+        let firstSpaceIndex : Nat = switch (slice.indexOf(' ')) {
+            case (null) return #error("Invalid tag '" # slice.toText() # "'");
+            case (?i) i;
+        };
+        let typeDefName = slice.slice(0, ?firstSpaceIndex).trimWhitespace().toText();
+        let tokenParser : TextSlice.TextSlice -> Result<Types.Token> = switch (TextX.toUpper(typeDefName)) {
+            case ("ENTITY") parseEntity;
+            case ("DOCTYPE") parseDocType;
+            case ("ELEMENT") parseElement;
+            case ("ATTLIST") parseAttribute;
+            case ("NOTATION") parseNotation;
+            case (t) return #error("Unknown type definition '" # t # "'");
+        };
+        tokenParser(slice.slice(firstSpaceIndex, null));
+    };
+
+    private func parseEntity(slice : TextSlice.TextSlice) : Result<Types.Token> {
+        let iter = TagTokenIterator(slice);
+        let name = switch (iter.next()) {
+            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+            case (?#error(e)) return #error(e);
+            case (?#ok(t)) t;
+        };
+
+        let token =
+
+        #ok(token);
+    };
+
+    private func parseDocType(slice : TextSlice.TextSlice) : Result<Types.Token> {
+        #doctype({
+            name = slice.slice(0, slice.indexOf(' ')).trimWhitespace().toText();
+            value = slice.slice(slice.indexOf(' '), null).trimWhitespace().toText();
+        });
+    };
+
+    private func parseElement(slice : TextSlice.TextSlice) : Result<Types.Token> {
+        #element({
+            name = slice.slice(0, slice.indexOf(' ')).trimWhitespace().toText();
+            value = slice.slice(slice.indexOf(' '), null).trimWhitespace().toText();
+        });
+    };
+
+    private func parseAttribute(slice : TextSlice.TextSlice) : Result<Types.Token> {
+        #attribute({
+            name = slice.slice(0, slice.indexOf(' ')).trimWhitespace().toText();
+            value = slice.slice(slice.indexOf(' '), null).trimWhitespace().toText();
+        });
+    };
+
+    private func parseNotation(slice : TextSlice.TextSlice) : Result<Types.Token> {
+        #notation({
+            name = slice.slice(0, slice.indexOf(' ')).trimWhitespace().toText();
+            value = slice.slice(slice.indexOf(' '), null).trimWhitespace().toText();
+        });
     };
 
     private func parseEndTag(slice : TextSlice.TextSlice) : Result<Types.Token> {
@@ -431,7 +446,6 @@ module {
     public type SliceMatchInfo = {
         startsWith : TextSlice.TextSlice;
         endsWith : TextSlice.TextSlice;
-        trimMatch : Bool;
         parse : SliceParser;
     };
 
@@ -523,5 +537,48 @@ module {
             };
         };
         return ?true;
+    };
+
+    private class TagTokenIterator(tagSlice : TextSlice.TextSlice) : Iter.Iter<Result<TextSlice.TextSlice>> {
+        let charIter = tagSlice.toIter();
+        var lastStartIndex : Nat = 0;
+        var nextIndex = 0;
+
+        public func next() : ?Result<TextSlice.TextSlice> {
+            var inQuotes = false;
+
+            loop {
+                switch (charIter.next()) {
+                    case (null) return buildSlice(false);
+                    case (?c) {
+                        nextIndex := nextIndex + 1;
+                        // '\u{22}' instead of '\"'. There is a parsing bug
+                        if (c == '\u{22}') {
+                            inQuotes := not inQuotes;
+                        } else if (c == '<' or c == '>') {
+                            // Only allowed as tag start/end
+                            return ?#error("Unexpected character '" # Text.fromChar(c) # "'");
+                        } else {
+                            if (not inQuotes) {
+                                if (Char.isWhitespace(c)) {
+                                    return buildSlice(true);
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+
+        private func buildSlice(isWhitespace : Bool) : ?Result<TextSlice.TextSlice> {
+            if (lastStartIndex == nextIndex) {
+                return null;
+            };
+            let offset = if (isWhitespace) 1 else 0; // Remove whitespace
+            let result = ?#ok(tagSlice.slice(lastStartIndex, ?(nextIndex - lastStartIndex - offset)));
+
+            lastStartIndex := nextIndex;
+            result;
+        };
     };
 };

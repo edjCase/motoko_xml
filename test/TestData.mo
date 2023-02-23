@@ -102,6 +102,50 @@ module {
             };
         },
         {
+            raw = "<root></root>";
+            tokens = [
+                #startTag({
+                    attributes = [];
+                    name = "root";
+                    selfClosing = false;
+                }),
+                #endTag({ name = "root" }),
+            ];
+            doc = {
+                encoding = null;
+                processInstructions = [];
+                root = {
+                    attributes = [];
+                    children = #open([]);
+                    name = "root";
+                };
+                standalone = null;
+                version = null;
+            };
+        },
+        {
+            raw = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><top a=b c=\"d\"><!-- comment --><mid t=5/><bottom >Content</ bottom></top>";
+            tokens = [
+                #startTag({
+                    attributes = [];
+                    name = "root";
+                    selfClosing = false;
+                }),
+                #endTag({ name = "root" }),
+            ];
+            doc = {
+                encoding = null;
+                processInstructions = [];
+                root = {
+                    attributes = [];
+                    children = #open([]);
+                    name = "root";
+                };
+                standalone = null;
+                version = null;
+            };
+        },
+        {
             raw = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><top a=b c=\"d\"><!-- comment --><mid t=5/><bottom >Content</ bottom></top>";
             tokens = [
                 #xmlDeclaration({
