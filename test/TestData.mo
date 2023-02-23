@@ -33,14 +33,14 @@ module {
             };
         },
         {
-            raw = "<root>&lt;&gt;&amp;&apos;&quot;&123;&xFF;</root>";
+            raw = "<root>&lt;&gt;&amp;&apos;&quot;&#123;&#x1F923;</root>";
             tokens = [
                 #startTag({
                     attributes = [];
                     name = "root";
                     selfClosing = false;
                 }),
-                #text("<>&'\"ab"),
+                #text("<>&'\"{🤣"),
                 #endTag({ name = "root" }),
             ];
             doc = {
@@ -48,7 +48,7 @@ module {
                 processInstructions = [];
                 root = {
                     attributes = [];
-                    children = #open([#text("<>")]);
+                    children = #open([#text("<>&'\"{🤣")]);
                     name = "root";
                 };
                 standalone = null;
@@ -102,7 +102,7 @@ module {
             };
         },
         {
-            raw = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><top a=b c=\"d\"><!-- comment --!><mid t=5/><bottom>Content</ bottom></top>";
+            raw = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><top a=b c=\"d\"><!-- comment --><mid t=5/><bottom >Content</ bottom></top>";
             tokens = [
                 #xmlDeclaration({
                     encoding = ?"UTF-8";

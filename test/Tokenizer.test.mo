@@ -4,14 +4,12 @@ import Iter "mo:base/Iter";
 import TestData "./TestData";
 import { test } "mo:test";
 
-successCases();
-failureCases();
+// Tokenizer successful tests
+for (example in Iter.fromArray(TestData.examples)) {
 
-func successCases() {
-    for (example in Iter.fromArray(TestData.examples)) {
-
-        test(
-            example.raw,
+    test(
+        "Tokenizer should succeed with xml: " # example.raw,
+        func() {
             switch (Tokenizer.tokenizeText(example.raw)) {
                 case (#error(e)) Debug.trap("Failed to tokenize xml.\n\nError:\n" # debug_show (e) # "\n\nXml:\n" # debug_show (example.raw));
                 case (#ok(tokens)) {
@@ -24,27 +22,26 @@ func successCases() {
                         i += 1;
                     };
                 };
-            },
-        );
-    };
+            };
+        },
+    );
 };
 
-func failureCases() {
-    for (example in Iter.fromArray(TestData.TokenizingFailureExamples)) {
+// Tokenizer failure tests
+for (example in Iter.fromArray(TestData.TokenizingFailureExamples)) {
 
-        test(
-            example.rawXml,
-            func() {
-                switch (Tokenizer.tokenizeText(example.rawXml)) {
-                    case (#ok(tokens)) Debug.trap("Expected failure but was sucessful.\n\nExpectedError: " # debug_show (example.error) # "\n\nRaw:\n" # example.rawXml # "\n\nTokens:\n" # debug_show (tokens));
-                    case (#error(e)) {
-                        if (e != example.error) {
-                            Debug.trap("Wrong error.\n\nExpected Error:\n" # debug_show (example.error) # "\n\nActual Error:\n" # debug_show (e));
-                        };
-                        // If matches, passed
+    test(
+        "Tokenizer should succeed with xml: " # example.rawXml,
+        func() {
+            switch (Tokenizer.tokenizeText(example.rawXml)) {
+                case (#ok(tokens)) Debug.trap("Expected failure but was sucessful.\n\nExpectedError: " # debug_show (example.error) # "\n\nRaw:\n" # example.rawXml # "\n\nTokens:\n" # debug_show (tokens));
+                case (#error(e)) {
+                    if (e != example.error) {
+                        Debug.trap("Wrong error.\n\nExpected Error:\n" # debug_show (example.error) # "\n\nActual Error:\n" # debug_show (e));
                     };
+                    // If matches, passed
                 };
-            },
-        );
-    };
+            };
+        },
+    );
 };
