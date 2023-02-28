@@ -60,6 +60,25 @@ module {
             slice(start, ?(end - start + 1));
         };
 
+        public func split(separator : Char) : Iter.Iter<TextSlice> {
+            let iter = toIter();
+            var start : Nat = 0;
+            var index : Nat = 0;
+            let buffer = Buffer.Buffer<TextSlice>(5);
+            label l loop {
+                let c = switch (iter.next()) {
+                    case null break l;
+                    case (?c) c;
+                };
+                if (c == separator) {
+                    buffer.add(slice(start, ?(index - start)));
+                    start := index + 1;
+                };
+                index += 1;
+            };
+            buffer.add(slice(start, ?(index - start)));
+            buffer.vals();
+        };
     };
 
     public func slice(value : Sequence, startIndex : Nat, length : ?Nat) : TextSlice {

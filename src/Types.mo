@@ -4,6 +4,7 @@ module {
         encoding : ?Text;
         standalone : ?Bool;
         root : Element;
+        docType : ?DocType;
         processInstructions : [ProcessingInstruction];
     };
 
@@ -47,14 +48,34 @@ module {
         standalone : ?Bool;
     };
 
+    public type ChildElementKind = {
+        #sequence : [ChildElement];
+        #choice : [ChildElement];
+        #element : Text;
+    };
+
+    public type Ocurrance = {
+        #one;
+        #zeroOrOne;
+        #zeroOrMore;
+        #oneOrMore;
+    };
+
+    public type ChildElement = {
+        kind : ChildElementKind;
+        ocurrance : Ocurrance;
+    };
+
+    public type AllowableContents = {
+        #any;
+        #empty;
+        #children : [ChildElement];
+        #mixed : [ChildElement];
+    };
+
     public type ElementTypeDefintion = {
         name : Text;
-        allowableContents : {
-            #any;
-            #empty;
-            #children : [];
-            #mixed : [];
-        };
+        allowableContents : AllowableContents;
     };
 
     public type AttributeType = {
@@ -85,8 +106,8 @@ module {
             };
             #external : {
                 type_ : { #system_; #public_ : { id : Text } };
-                uri : Text;
-                notation : ?Text;
+                url : Text;
+                notationId : ?Text;
             };
         };
     };
@@ -99,7 +120,7 @@ module {
             };
             #external : {
                 type_ : { #system_; #public_ : { id : Text } };
-                uri : Text;
+                url : Text;
             };
         };
     };
@@ -108,29 +129,32 @@ module {
         name : Text;
         type_ : {
             #system_ : { url : Text };
-            #public_ : { id : Text; uri : ?Text };
+            #public_ : { id : Text; url : ?Text };
         };
     };
 
+    public type InternalDocumentTypeDefinition = {
+        #element : ElementTypeDefintion;
+        #attribute : AttributeTypeDefinition;
+        #generalEntity : GeneralEntityTypeDefinition;
+        #parameterEntity : ParameterEntityTypeDefinition;
+        #notation : NotationTypeDefinition;
+        #processingInstruction : ProcessingInstruction;
+        #comment : Text;
+    };
+    public type ExternalTypesDefinition = {
+        #system_ : { url : Text };
+        #public_ : { id : Text; url : Text };
+    };
+
     public type DocumentTypeDefinition = {
-        externalTypes : ?{
-            #system_ : { url : Text };
-            #public_ : { name : Text; uri : ?Text };
-        };
-        internalTypes : [{
-            #element : ElementTypeDefintion;
-            #attribute : AttributeTypeDefinition;
-            #generalEntity : GeneralEntityTypeDefinition;
-            #parameterEntity : ParameterEntityTypeDefinition;
-            #notation : NotationTypeDefinition;
-            #processingInstruction : ProcessingInstruction;
-            #comment : Text;
-        }];
+        externalTypes : ?ExternalTypesDefinition;
+        internalTypes : [InternalDocumentTypeDefinition];
     };
 
     public type DocType = {
         rootElementName : Text;
-        typeDefintion : DocumentTypeDefinition;
+        typeDefinition : DocumentTypeDefinition;
     };
 
     public type Token = {
