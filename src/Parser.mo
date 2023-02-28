@@ -22,6 +22,7 @@ module {
         var version : ?Types.Version = null;
         var encoding : ?Text = null;
         var standalone : ?Bool = null;
+        var docType : ?Types.DocType = null;
         let processingInstructions = Buffer.Buffer<Types.ProcessingInstruction>(1);
         loop {
             switch (tokens.next()) {
@@ -35,6 +36,9 @@ module {
                 };
                 case (?#processingInstruction(p)) {
                     processingInstructions.add(p);
+                };
+                case (?#docType(d)) {
+                    docType := ?d;
                 };
                 case (?#startTag(tag)) {
                     let root = switch (parseElement(tokens, tag, tag.selfClosing)) {
@@ -60,6 +64,7 @@ module {
                         root = root;
                         standalone = standalone;
                         processInstructions = Buffer.toArray(processingInstructions);
+                        docType = docType;
                     });
                 };
                 case (?t) return #error(#unexpectedToken(t));

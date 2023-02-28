@@ -8,7 +8,7 @@ import { test } "mo:test";
 for (example in Iter.fromArray(TestData.examples)) {
 
     test(
-        "Tokenizer should succeed with xml: " # example.raw,
+        "Tokenizer should succeed: " # example.name,
         func() {
             switch (Tokenizer.tokenizeText(example.raw)) {
                 case (#error(e)) Debug.trap("Failed to tokenize xml.\n\nError:\n" # debug_show (e) # "\n\nXml:\n" # debug_show (example.raw));
@@ -17,7 +17,7 @@ for (example in Iter.fromArray(TestData.examples)) {
                     for (token in Iter.fromArray(tokens)) {
                         let expectedToken = example.tokens[i];
                         if (token != expectedToken) {
-                            Debug.trap("Token mismatch. Expected:\n" # debug_show (expectedToken) # "\n\nActual:\n" # debug_show (token));
+                            Debug.trap("Token mismatch.\n\nExpected:\n" # debug_show (expectedToken) # "\n\nActual:\n" # debug_show (token));
                         };
                         i += 1;
                     };
@@ -31,10 +31,10 @@ for (example in Iter.fromArray(TestData.examples)) {
 for (example in Iter.fromArray(TestData.TokenizingFailureExamples)) {
 
     test(
-        "Tokenizer should faile with xml: " # example.rawXml,
+        "Tokenizer should fail: " # example.name,
         func() {
             switch (Tokenizer.tokenizeText(example.rawXml)) {
-                case (#ok(tokens)) Debug.trap("Expected failure but was sucessful.\n\nExpectedError: " # debug_show (example.error) # "\n\nRaw:\n" # example.rawXml # "\n\nTokens:\n" # debug_show (tokens));
+                case (#ok(tokens)) Debug.trap("Expected failure but was sucessful.\n\nExpected Error: " # debug_show (example.error) # "\n\nRaw:\n" # example.rawXml # "\n\nTokens:\n" # debug_show (tokens));
                 case (#error(e)) {
                     if (e != example.error) {
                         Debug.trap("Wrong error.\n\nExpected Error:\n" # debug_show (example.error) # "\n\nActual Error:\n" # debug_show (e));

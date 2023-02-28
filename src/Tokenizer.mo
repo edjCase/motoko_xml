@@ -341,7 +341,15 @@ module {
                 };
             };
         };
-        #ok(#doctype({ rootElementName = rootElementName; typeDefinition = { externalTypes = externalTypes; internalTypes = internalTypes } }));
+        #ok(
+            #docType({
+                rootElementName = rootElementName;
+                typeDefinition = {
+                    externalTypes = externalTypes;
+                    internalTypes = internalTypes;
+                };
+            }),
+        );
     };
 
     private func parseInternalTypes(iter : TagTokenIterator) : Result<[Types.InternalDocumentTypeDefinition]> {
@@ -541,7 +549,7 @@ module {
             case (?#error(e)) return #error(e);
             case (?#ok(t)) t.toText();
         };
-        let allowableContents = switch (iter.next()) {
+        let allowableContents : Types.AllowableContents = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
             case (?#error(e)) return #error(e);
             case (?#ok(childSlice)) {
@@ -557,16 +565,23 @@ module {
                         case (#error(e)) return #error(e);
                         case (#ok(child)) child;
                     };
-                    switch (child.kind) {
-                        case (#choice(childElements)) {
+                    switch (child) {
+                        case ({ kind = #choice(childElements); ocurrance = o }) {
                             if (childElements[0].kind == #element("#PCDATA")) {
-                                #mixed(childElements);
+                                // Mixed when #PCDATA is the first child
+                                #mixed({
+                                    kind = #choice(childElements);
+                                    ocurrance = o;
+                                });
                             } else {
-                                #choice(childElements);
+                                #children({
+                                    kind = #choice(childElements);
+                                    ocurrance = o;
+                                });
                             };
                         };
-                        case (#sequence(childElements)) {
-                            #choice(childElements);
+                        case (c) {
+                            #children(c);
                         };
                     };
                 };
@@ -656,17 +671,122 @@ module {
     };
 
     private func parseAttribute(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
-        #attribute({
-            name = slice.slice(0, slice.indexOf(' ')).trimWhitespace().toText();
-            value = slice.slice(slice.indexOf(' '), null).trimWhitespace().toText();
-        });
+        let iter = TagTokenIterator(slice);
+        let elementName = switch (iter.next()) {
+            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+            case (?#error(e)) return #error(e);
+            case (?#ok(t)) t.toText();
+        };
+
+        let attributeName = switch (iter.next()) {
+            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+            case (?#error(e)) return #error(e);
+            case (?#ok(t)) t.toText();
+        };
+
+        let type_ : Types.AttributeType = switch (iter.next()) {
+            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+            case (?#error(e)) return #error(e);
+            case (?#ok(t)) {
+                if (t.get(0) == '(' and t.get(t.size() - 1) == ')') {
+                    let enumValues = t.slice(1, ?(t.size() - 1)).split('|');
+                    #enumeration(Iter.toArray(Iter.map<TextSlice.TextSlice, Text>(enumValues, func(t) = t.toText())));
+                } else {
+                    switch (t.toText()) {
+                        case ("CDATA") #cdata;
+                        case ("ID") #id;
+                        case ("IDREF") #idRef;
+                        case ("IDREFS") #idRefs;
+                        case ("ENTITY") #entity;
+                        case ("ENTITIES") #entities;
+                        case ("NMTOKEN") #nmToken;
+                        case ("NMTOKENS") #nmTokens;
+                        case ("NOTATION") {
+                            let notations = switch (iter.next()) {
+                                case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+                                case (?#error(e)) return #error(e);
+                                case (?#ok(t)) t.slice(1, ?(t.size() - 1)).split('|');
+                            };
+                            #notation(Iter.toArray(Iter.map<TextSlice.TextSlice, Text>(notations, func(t) = t.toText())));
+                        };
+                        case (c) return #error("Unexpected token '" # c # "'. Expected a valid attribute type.");
+                    };
+                };
+            };
+        };
+
+        let defaultValue = switch (iter.next()) {
+            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+            case (?#error(e)) return #error(e);
+            case (?#ok(t)) switch (t.toText()) {
+                case ("#REQUIRED") #required;
+                case ("#IMPLIED") #implied;
+                case ("#FIXED") {
+                    let fixedValue = switch (iter.next()) {
+                        case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+                        case (?#error(e)) return #error(e);
+                        case (?#ok(t)) t.toText();
+                    };
+                    #fixed(fixedValue);
+                };
+                case (c) return #error("Unexpected token '" # c # "'. Expected '#REQUIRED', '#IMPLIED', or '#FIXED'");
+            };
+        };
+
+        #ok(
+            #attribute({
+                name = attributeName;
+                type_ = type_;
+                defaultValue = defaultValue;
+                elementName = elementName;
+            }),
+        );
     };
 
     private func parseNotation(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
-        #notation({
-            name = slice.slice(0, slice.indexOf(' ')).trimWhitespace().toText();
-            value = slice.slice(slice.indexOf(' '), null).trimWhitespace().toText();
-        });
+        let iter = TagTokenIterator(slice);
+        let name = switch (iter.next()) {
+            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+            case (?#error(e)) return #error(e);
+            case (?#ok(t)) t.toText();
+        };
+        let type_ = switch (iter.next()) {
+            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+            case (?#error(e)) return #error(e);
+            case (?#ok(t)) {
+                switch (t.toText()) {
+                    case ("PUBLIC") {
+                        let id = switch (iter.next()) {
+                            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+                            case (?#error(e)) return #error(e);
+                            case (?#ok(t)) t.toText();
+                        };
+                        let url = switch (iter.next()) {
+                            case (null) null;
+                            case (?#error(e)) return #error(e);
+                            case (?#ok(t)) ?t.toText();
+                        };
+                        #public_({ id = id; url = url });
+                    };
+                    case ("SYSTEM") {
+                        let url = switch (iter.next()) {
+                            case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
+                            case (?#error(e)) return #error(e);
+                            case (?#ok(t)) t.toText();
+                        };
+                        #system_({ url = url });
+                    };
+                    case (c) return #error("Unexpected token '" # c # "'. Expected 'PUBLIC' or 'SYSTEM'.");
+                };
+            };
+        };
+
+        #ok(
+            #notation({
+                name = name;
+                type_ = type_;
+            }),
+        );
     };
 
     private func parseEndTag(slice : TextSlice.TextSlice) : Result<Types.Token> {

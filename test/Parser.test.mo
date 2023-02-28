@@ -7,7 +7,7 @@ import { test } "mo:test";
 // Parser successful tests
 for (example in Iter.fromArray(TestData.examples)) {
     test(
-        "Parser should succeed with tokens: " # debug_show (example.tokens),
+        "Parser should succeed: " # debug_show (example.name),
         func() {
             switch (Parser.parseDocument(Iter.fromArray(example.tokens))) {
                 case (#error(e)) {
@@ -26,7 +26,7 @@ for (example in Iter.fromArray(TestData.examples)) {
 // Parser failure tests
 for (example in Iter.fromArray(TestData.parsingFailureExamples)) {
     test(
-        "Parser should fail with tokens: " # debug_show (example.tokens),
+        "Parser should fail: " # debug_show (example.name),
         func() {
             switch (Parser.parseDocument(Iter.fromArray(example.tokens))) {
                 case (#error(e)) {

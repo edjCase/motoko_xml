@@ -69,8 +69,8 @@ module {
     public type AllowableContents = {
         #any;
         #empty;
-        #children : [ChildElement];
-        #mixed : [ChildElement];
+        #children : ChildElement;
+        #mixed : ChildElement;
     };
 
     public type ElementTypeDefintion = {
@@ -87,7 +87,7 @@ module {
         #entities;
         #nmToken;
         #nmTokens;
-        #notation;
+        #notation : [Text];
         #enumeration : [Text];
     };
 
@@ -164,6 +164,6 @@ module {
         #comment : Text;
         #xmlDeclaration : XmlDeclaration;
         #processingInstruction : ProcessingInstruction;
-        #doctype : DocType;
+        #docType : DocType;
     };
 };
