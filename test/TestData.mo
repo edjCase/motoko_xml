@@ -114,23 +114,64 @@ module {
             name = "XML Declaration";
             raw = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><top a=b c=\"d\"><!-- comment --><mid t=5/><bottom >Content</ bottom></top>";
             tokens = [
+                #xmlDeclaration({
+                    encoding = ?"UTF-8";
+                    version = { major = 1; minor = 0 };
+                    standalone = null;
+                }),
                 #startTag({
-                    attributes = [];
-                    name = "root";
+                    attributes = [
+                        {
+                            name = "a";
+                            value = ?"b";
+                        },
+                        { name = "c"; value = ?"d" },
+                    ];
+                    name = "top";
                     selfClosing = false;
                 }),
-                #endTag({ name = "root" }),
+                #comment(" comment "),
+                #startTag({
+                    attributes = [
+                        {
+                            name = "t";
+                            value = ?"5";
+                        },
+                    ];
+                    name = "mid";
+                    selfClosing = true;
+                }),
+                #startTag({
+                    attributes = [];
+                    name = "bottom";
+                    selfClosing = false;
+                }),
+                #text("Content"),
+                #endTag({ name = "bottom" }),
+                #endTag({ name = "top" }),
             ];
             doc = {
-                encoding = null;
+                encoding = ?"UTF-8";
                 processInstructions = [];
                 root = {
-                    attributes = [];
-                    children = #open([]);
-                    name = "root";
+                    attributes = [{ name = "a"; value = ?"b" }, { name = "c"; value = ?"d" }];
+                    children = #open([
+                        #comment(" comment "),
+                        #element({
+                            attributes = [{ name = "t"; value = ?"5" }];
+                            children = #selfClosing;
+                            name = "mid";
+                        }),
+                        #element({
+                            attributes = [];
+                            children = #open([#text("Content")]);
+                            name = "bottom";
+                        }),
+                    ]);
+                    name = "top";
                 };
                 standalone = null;
-                version = null;
+                version = ?{ major = 1; minor = 0 };
                 docType = null;
             };
         },
