@@ -3,6 +3,7 @@ import Parser "../src/Parser";
 import TestData "TestData";
 import Iter "mo:base/Iter";
 import { test } "mo:test";
+import Text "mo:base/Text";
 
 // Parser successful tests
 for (example in Iter.fromArray(TestData.examples)) {
