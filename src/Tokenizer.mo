@@ -236,7 +236,7 @@ module {
             case (?index) {
                 // split
                 let name = slice.slice(0, ?index);
-                let value = slice.slice(index + 1, null).trimSingle('\u{22}'); // Remove quotes. '\u{22}' instead of '\"'. There is a parsing bug
+                let value = slice.slice(index + 1, null).trimSingle('\"');
 
                 ?(name.toText(), ?value.toText());
             };
@@ -266,6 +266,17 @@ module {
                     startsWith = TextSlice.fromText("<![CDATA[");
                     endsWith = TextSlice.fromText("]]>");
                     parse = parseCDATA;
+                },
+                // TODO make DOCTYPE more robust and one case
+                {
+                    startsWith = TextSlice.fromText("<!DOCTYPE");
+                    endsWith = TextSlice.fromText("]>");
+                    parse = parseDocType;
+                },
+                {
+                    startsWith = TextSlice.fromText("<!DOCTYPE");
+                    endsWith = TextSlice.fromText("] >");
+                    parse = parseDocType;
                 },
                 {
                     startsWith = TextSlice.fromText("<!DOCTYPE");
@@ -308,7 +319,7 @@ module {
                             id = publicId;
                             url = url;
                         });
-                        let internalTypes : [Types.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter)) {
+                        let internalTypes : [Types.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
                             case (#error(e)) return #error(e);
                             case (#ok(t)) t;
                         };
@@ -323,7 +334,7 @@ module {
                         let externalTypes : ?Types.ExternalTypesDefinition = ?#system_({
                             url = url.toText();
                         });
-                        let internalTypes : [Types.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter)) {
+                        let internalTypes : [Types.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
                             case (#error(e)) return #error(e);
                             case (#ok(t)) t;
                         };
@@ -331,7 +342,7 @@ module {
                     };
                     case ("[") {
                         let externalTypes : ?Types.ExternalTypesDefinition = null;
-                        let internalTypes : [Types.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter)) {
+                        let internalTypes : [Types.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
                             case (#error(e)) return #error(e);
                             case (#ok(t)) t;
                         };
@@ -352,54 +363,46 @@ module {
         );
     };
 
-    private func parseInternalTypes(iter : TagTokenIterator) : Result<[Types.InternalDocumentTypeDefinition]> {
+    private func parseInternalTypes(reader : IterX.IterReader<Char>) : Result<[Types.InternalDocumentTypeDefinition]> {
         let internalTypes = Buffer.Buffer<Types.InternalDocumentTypeDefinition>(2);
         label l loop {
-            let internalType = switch (iter.next()) {
-                case (null) {
-                    break l;
-                };
-                case (?#error(e)) {
-                    return #error(e);
-                };
-                case (?#ok(t)) {
-                    if (t.size() == 1) {
-                        let char = t.get(0);
-                        if (char == ']') {
-                            break l; // End of internal types
-                        };
-                        if (char == '[') {
-                            if (internalTypes.size() > 0) {
-                                return #error("Unexpected token '['");
-                            };
-                            continue l; // Skip first bracket
-                        };
-                    };
-                    switch (parseInternalType(t)) {
-                        case (#error(e)) return #error(e);
-                        case (#ok(t)) t;
-                    };
+            skipWhitespace(reader);
+            if (reader.peek() == null) {
+                break l;
+            };
+            let r = matchAndParseSlice<Types.InternalDocumentTypeDefinition>(
+                reader,
+                [
+                    {
+                        startsWith = TextSlice.fromText("<!ENTITY");
+                        endsWith = TextSlice.fromText(">");
+                        parse = parseEntity;
+                    },
+                    {
+                        startsWith = TextSlice.fromText("<!ELEMENT");
+                        endsWith = TextSlice.fromText(">");
+                        parse = parseElement;
+                    },
+                    {
+                        startsWith = TextSlice.fromText("<!ATTLIST");
+                        endsWith = TextSlice.fromText(">");
+                        parse = parseAttribute;
+                    },
+                    {
+                        startsWith = TextSlice.fromText("<!NOTATION");
+                        endsWith = TextSlice.fromText(">");
+                        parse = parseNotation;
+                    },
+                ],
+            );
+            switch (r) {
+                case (#error(e)) return #error(e);
+                case (#ok(t)) {
+                    internalTypes.add(t);
                 };
             };
-            internalTypes.add(internalType);
         };
         #ok(Buffer.toArray(internalTypes));
-    };
-
-    private func parseInternalType(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
-        let firstSpaceIndex : Nat = switch (slice.indexOf(' ')) {
-            case (null) return #error("Invalid tag '" # slice.toText() # "'");
-            case (?i) i;
-        };
-        let typeDefName = slice.slice(0, ?firstSpaceIndex).trimWhitespace().toText();
-        let internalTypeParser : TextSlice.TextSlice -> Result<Types.InternalDocumentTypeDefinition> = switch (TextX.toUpper(typeDefName)) {
-            case ("ENTITY") parseEntity;
-            case ("ELEMENT") parseElement;
-            case ("ATTLIST") parseAttribute;
-            case ("NOTATION") parseNotation;
-            case (t) return #error("Unknown type definition '" # t # "'");
-        };
-        internalTypeParser(slice.slice(firstSpaceIndex, null));
     };
 
     private func parseEntity(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
@@ -560,41 +563,31 @@ module {
                         case (c) return #error("Unexpected token '" # c # "'. Expected 'EMPTY', 'ANY', or '('");
                     };
                 } else {
-
-                    let child = switch (parseChildElement(childSlice)) {
-                        case (#error(e)) return #error(e);
-                        case (#ok(child)) child;
+                    if (childSlice.get(childSlice.size() - 1) != ')') {
+                        return #error("Expected ')'");
                     };
-                    switch (child) {
-                        case ({ kind = #choice(childElements); ocurrance = o }) {
-                            if (childElements[0].kind == #element("#PCDATA")) {
+
+                    switch (parseChoiceOrSequence(childSlice)) {
+                        case (#error(e)) return #error(e);
+                        case (#ok(#choice(children))) {
+                            if (children[0].kind == #element("#PCDATA")) {
                                 // Mixed when #PCDATA is the first child
-                                #mixed({
-                                    kind = #choice(childElements);
-                                    ocurrance = o;
-                                });
+                                #mixed(#choice(children));
                             } else {
-                                #children({
-                                    kind = #choice(childElements);
-                                    ocurrance = o;
-                                });
+                                #children(#choice(children));
                             };
                         };
-                        case (c) {
-                            #children(c);
-                        };
+                        case (#ok(#sequence(children))) #children(#sequence(children));
                     };
                 };
             };
         };
-
         #ok(#element({ name = name; allowableContents = allowableContents }));
     };
 
     private func parseChildElement(childSlice : TextSlice.TextSlice) : Result<Types.ChildElement> {
         // Get the ocurrance suffix and return the slice without it
         let (ocurrance, sliceWithoutOcurrance) = parseOcurrance(childSlice);
-
         // If not wrapped in parens, it's a single element
         if (sliceWithoutOcurrance.get(0) != '(') {
             return #ok({
@@ -605,13 +598,13 @@ module {
 
         // Otherwise, it's a group of elements
         let lastIndex : Nat = sliceWithoutOcurrance.size() - 1;
-        if (sliceWithoutOcurrance.get(lastIndex - 1) != ')') {
+        if (sliceWithoutOcurrance.get(lastIndex) != ')') {
             // Validate it ends in a ')'
-            return #error("Unexpected token '" # Text.fromChar(sliceWithoutOcurrance.get(lastIndex - 1)) # "'. Expected ')'");
+            return #error("Unexpected token '" # Text.fromChar(sliceWithoutOcurrance.get(lastIndex)) # "'. Expected ')'");
         };
 
         let sliceWithoutParans = sliceWithoutOcurrance.slice(1, ?(lastIndex - 1)); // Remove '(' and ')'
-        let kind = switch (parseChildElementKind(sliceWithoutParans)) {
+        let kind = switch (parseChoiceOrSequence(sliceWithoutParans)) {
             case (#error(e)) return #error(e);
             case (#ok(k)) k;
         };
@@ -637,37 +630,49 @@ module {
         return (ocurrance, trimmedSlice);
     };
 
-    private func parseChildElementKind(childrenSlice : TextSlice.TextSlice) : Result<{ #choice : [Types.ChildElement]; #sequence : [Types.ChildElement] }> {
-        let c = if (childrenSlice.indexOf('|') != null) {
-            // If there's a pipe, it's a choice
-            // ex: (a|b|c)*
-            let children = switch (getChildren('|', childrenSlice)) {
-                case (#error(e)) return #error(e);
-                case (#ok(c)) c;
+    private func parseChoiceOrSequence(slice : TextSlice.TextSlice) : Result<Types.ElementChoiceOrSequence> {
+        let children = Buffer.Buffer<Types.ChildElement>(5);
+        let childCharacters = Buffer.Buffer<Char>(5);
+        var depth = 0;
+        var isChoice : ?Bool = null;
+        label f for (c in slice.toIter()) {
+            let addCharacter : Bool = if (c == '(') {
+                depth := depth + 1;
+                depth != 1; // Only add the character if we're not at the top level
+            } else if (c == ')') {
+                depth := depth - 1;
+                depth != 0; // Only add the character if we're not at the top level
+            } else if ((c == '|' or c == ',') and depth <= 1) {
+                let hasChoiceSeperator = c == '|';
+                if (isChoice == null) {
+                    isChoice := ?hasChoiceSeperator;
+                } else if (isChoice != ?hasChoiceSeperator) {
+                    return #error("Cannot mix '|' and ',' in a single element");
+                };
+                switch (parseChildElement(TextSlice.slice(#buffer(childCharacters), 0, null))) {
+                    case (#error(e)) return #error(e);
+                    case (#ok(c)) children.add(c);
+                };
+                childCharacters.clear();
+                false; // Skip seperator
+            } else {
+                true;
             };
-            #choice(children);
+            if (addCharacter) {
+                childCharacters.add(c);
+            };
+        };
+        switch (parseChildElement(TextSlice.slice(#buffer(childCharacters), 0, null))) {
+            case (#error(e)) return #error(e);
+            case (#ok(c)) children.add(c);
+        };
+        let childrenArray = Buffer.toArray(children);
+        // Default to sequence unless there was a '|'
+        if (isChoice == ?true) {
+            #ok(#choice(childrenArray));
         } else {
-            // If there's no pipe, it's a sequence of one or many
-            // ex: (a,b,c)*
-            // ex: (a)
-            let children = switch (getChildren(',', childrenSlice)) {
-                case (#error(e)) return #error(e);
-                case (#ok(c)) c;
-            };
-            #sequence(children);
+            #ok(#sequence(childrenArray));
         };
-        #ok(c);
-    };
-
-    private func getChildren(seperator : Char, trimmedText : TextSlice.TextSlice) : Result<[Types.ChildElement]> {
-        let choices = Buffer.Buffer<Types.ChildElement>(5);
-        for (a in trimmedText.split('|')) {
-            switch (parseChildElement(a)) {
-                case (#error(e)) return #error(e);
-                case (#ok(c)) choices.add(c);
-            };
-        };
-        return #ok(Buffer.toArray(choices));
     };
 
     private func parseAttribute(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
@@ -891,15 +896,15 @@ module {
         };
     };
 
-    public type SliceParser = TextSlice.TextSlice -> Result<Types.Token>;
+    public type SliceParser<T> = TextSlice.TextSlice -> Result<T>;
 
-    public type SliceMatchInfo = {
+    public type SliceMatchInfo<T> = {
         startsWith : TextSlice.TextSlice;
         endsWith : TextSlice.TextSlice;
-        parse : SliceParser;
+        parse : SliceParser<T>;
     };
 
-    public func matchAndParseSlice(reader : IterX.IterReader<Char>, cases : [SliceMatchInfo]) : Result<Types.Token> {
+    public func matchAndParseSlice<T>(reader : IterX.IterReader<Char>, cases : [SliceMatchInfo<T>]) : Result<T> {
         let readCharacters = Buffer.Buffer<Char>(5);
         var charIndex = 0;
         let reIter = {
@@ -990,10 +995,16 @@ module {
     };
 
     private class TagTokenIterator(tagSlice : TextSlice.TextSlice) : Iter.Iter<Result<TextSlice.TextSlice>> {
-        let charIter = tagSlice.toIter();
+        let trimmedTagSlice = tagSlice.trimWhitespace();
+        let charIter = trimmedTagSlice.toIter();
         var lastStartIndex : Nat = 0;
         var nextIndex = 0;
+        var started = false;
 
+        public func toReader() : IterX.IterReader<Char> {
+            let restOfSlice = trimmedTagSlice.slice(lastStartIndex, null);
+            return IterX.IterReader(restOfSlice.toIter());
+        };
         public func next() : ?Result<TextSlice.TextSlice> {
             var inQuotes = false;
 
@@ -1005,9 +1016,6 @@ module {
                         // '\u{22}' instead of '\"'. There is a parsing bug
                         if (c == '\u{22}') {
                             inQuotes := not inQuotes;
-                        } else if (c == '<' or c == '>') {
-                            // Only allowed as tag start/end
-                            return ?#error("Unexpected character '" # Text.fromChar(c) # "'");
                         } else {
                             if (not inQuotes) {
                                 if (Char.isWhitespace(c)) {
@@ -1022,10 +1030,11 @@ module {
 
         private func buildSlice(isWhitespace : Bool) : ?Result<TextSlice.TextSlice> {
             if (lastStartIndex == nextIndex) {
+                // If no progress was made, we are done
                 return null;
             };
             let offset = if (isWhitespace) 1 else 0; // Remove whitespace
-            let result = ?#ok(tagSlice.slice(lastStartIndex, ?(nextIndex - lastStartIndex - offset)));
+            let result = ?#ok(trimmedTagSlice.slice(lastStartIndex, ?(nextIndex - lastStartIndex - offset)));
 
             lastStartIndex := nextIndex;
             result;

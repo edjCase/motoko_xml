@@ -93,7 +93,7 @@ module Slice {
             if (comparer(get(end), value)) {
                 end -= 1;
             };
-            slice(start, ?(end - start + 1));
+            slice(start, ?(end + 1 - start));
         };
 
         private func indexOfInternal(subset : Sequence<T>, onlyStartsWith : Bool) : ?Nat {

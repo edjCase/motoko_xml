@@ -48,10 +48,9 @@ module {
         standalone : ?Bool;
     };
 
-    public type ChildElementKind = {
+    public type ElementChoiceOrSequence = {
         #sequence : [ChildElement];
         #choice : [ChildElement];
-        #element : Text;
     };
 
     public type Ocurrance = {
@@ -62,15 +61,15 @@ module {
     };
 
     public type ChildElement = {
-        kind : ChildElementKind;
+        kind : ElementChoiceOrSequence or { #element : Text };
         ocurrance : Ocurrance;
     };
 
     public type AllowableContents = {
         #any;
         #empty;
-        #children : ChildElement;
-        #mixed : ChildElement;
+        #children : ElementChoiceOrSequence;
+        #mixed : ElementChoiceOrSequence;
     };
 
     public type ElementTypeDefintion = {

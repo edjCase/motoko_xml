@@ -177,13 +177,110 @@ module {
         },
         {
             name = "DOCTYPE";
-            raw = "<!DOCTYPE root [ <!ELEMENT foo (#PCDATA)> <!ELEMENT img EMPTY> <!ELEMENT img2 ANY> <!ELEMENT img3 (foo)> <!ELEMENT img4 (foo|img)> <!ELEMENT img5 (foo,img)> <!ELEMENT img3 (foo*)> <!ELEMENT img3 (foo+)> <!ELEMENT img3 (foo?)> <!ELEMENT img3 ((foo|img)*)>]><root></root>";
+            raw = "<!DOCTYPE root [ <!ELEMENT foo (#PCDATA)> <!ELEMENT img EMPTY> <!ELEMENT img2 ANY> <!ELEMENT img3 (foo)> <!ELEMENT img4 (foo|img)> <!ELEMENT img5 (foo,img)> <!ELEMENT img6 (foo*)> <!ELEMENT img7 (foo+)> <!ELEMENT img8 (foo?)> <!ELEMENT img9 ((foo|img)*)>]><root></root>";
             tokens = [
                 #docType({
                     rootElementName = "root";
                     typeDefinition = {
                         externalTypes = null;
-                        internalTypes = [];
+                        internalTypes = [
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #element("#PCDATA");
+                                        ocurrance = #one;
+                                    }]),
+                                );
+                                name = "foo";
+                            }),
+                            #element({
+                                allowableContents = #empty;
+                                name = "img";
+                            }),
+                            #element({
+                                allowableContents = #any;
+                                name = "img2";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #element("foo");
+                                        ocurrance = #one;
+                                    }]),
+                                );
+                                name = "img3";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #choice([
+                                        {
+                                            kind = #element("foo");
+                                            ocurrance = #one;
+                                        },
+                                        {
+                                            kind = #element("img");
+                                            ocurrance = #one;
+                                        },
+                                    ]),
+                                );
+                                name = "img4";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([
+                                        {
+                                            kind = #element("foo");
+                                            ocurrance = #one;
+                                        },
+                                        {
+                                            kind = #element("img");
+                                            ocurrance = #one;
+                                        },
+                                    ]),
+                                );
+                                name = "img5";
+                            }),
+                            #element({
+                                allowableContents = #children(#sequence([{ kind = #element("foo"); ocurrance = #zeroOrMore }]));
+                                name = "img6";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #element("foo");
+                                        ocurrance = #oneOrMore;
+                                    }]),
+                                );
+                                name = "img7";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #element("foo");
+                                        ocurrance = #zeroOrOne;
+                                    }]),
+                                );
+                                name = "img8";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #choice([
+                                            {
+                                                kind = #element("foo");
+                                                ocurrance = #one;
+                                            },
+                                            {
+                                                kind = #element("img");
+                                                ocurrance = #one;
+                                            },
+                                        ]);
+                                        ocurrance = #zeroOrMore;
+                                    }]),
+                                );
+                                name = "img9";
+                            }),
+                        ];
                     };
                 }),
                 #startTag({
@@ -194,22 +291,108 @@ module {
                 #endTag({ name = "root" }),
             ];
             doc = {
-                encoding = null;
-                processInstructions = [];
-                root = {
-                    attributes = [];
-                    children = #open([]);
-                    name = "root";
-                };
-                standalone = null;
-                version = null;
                 docType = ?{
                     rootElementName = "root";
                     typeDefinition = {
                         externalTypes = null;
-                        internalTypes = [];
+                        internalTypes = [
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #element("#PCDATA");
+                                        ocurrance = #one;
+                                    }]),
+                                );
+                                name = "foo";
+                            }),
+                            #element({
+                                allowableContents = #empty;
+                                name = "img";
+                            }),
+                            #element({ allowableContents = #any; name = "img2" }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #element("foo");
+                                        ocurrance = #one;
+                                    }]),
+                                );
+                                name = "img3";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #choice([{ kind = #element("foo"); ocurrance = #one }, { kind = #element("img"); ocurrance = #one }]),
+                                );
+                                name = "img4";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([
+                                        {
+                                            kind = #element("foo");
+                                            ocurrance = #one;
+                                        },
+                                        {
+                                            kind = #element("img");
+                                            ocurrance = #one;
+                                        },
+                                    ]),
+                                );
+                                name = "img5";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #element("foo");
+                                        ocurrance = #zeroOrMore;
+                                    }]),
+                                );
+                                name = "img6";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #element("foo");
+                                        ocurrance = #oneOrMore;
+                                    }]),
+                                );
+                                name = "img7";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #element("foo");
+                                        ocurrance = #zeroOrOne;
+                                    }]),
+                                );
+                                name = "img8";
+                            }),
+                            #element({
+                                allowableContents = #children(
+                                    #sequence([{
+                                        kind = #choice([
+                                            {
+                                                kind = #element("foo");
+                                                ocurrance = #one;
+                                            },
+                                            {
+                                                kind = #element("img");
+                                                ocurrance = #one;
+                                            },
+                                        ]);
+                                        ocurrance = #zeroOrMore;
+                                    }]),
+                                );
+                                name = "img9";
+                            }),
+                        ];
                     };
                 };
+                encoding = null;
+                processInstructions = [];
+                root = { attributes = []; children = #open([]); name = "root" };
+                standalone = null;
+                version = null;
             };
         },
         {
@@ -302,7 +485,7 @@ module {
                     selfClosing = false;
                 }),
                 #startTag({
-                    attributes = [{ name = "alt"; value = ?"An illustration of the Twitter logo" }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/6kBqimyOvt-iCvNDVhv2okF4ey4" }];
+                    attributes = [{ name = "alt"; value = ?"An illustration of the Twitter logo" }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/6kBqimyOvt-iCvNDVhv2okF4ey4=/0x0:3000x2000/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659917/acastro_STK050_04.0.jpg" }];
                     name = "img";
                     selfClosing = true;
                 }),
@@ -423,7 +606,7 @@ module {
                     selfClosing = false;
                 }),
                 #startTag({
-                    attributes = [{ name = "alt"; value = ?"Two chevy bolt ev cars, wrapped in domino’s artwork are parked in front of a domino’s pizza store with one of the cars hooked up to a charger." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/uraUyO3VeLJ8RJ6ethB54sPF1bs" }];
+                    attributes = [{ name = "alt"; value = ?"Two chevy bolt ev cars, wrapped in domino’s artwork are parked in front of a domino’s pizza store with one of the cars hooked up to a charger." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/uraUyO3VeLJ8RJ6ethB54sPF1bs=/0x1:2048x1366/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659802/Dominos_Chevy_Bolt_EVs_08.0.jpg" }];
                     name = "img";
                     selfClosing = true;
                 }),
@@ -586,7 +769,7 @@ module {
                     selfClosing = false;
                 }),
                 #startTag({
-                    attributes = [{ name = "alt"; value = ?"" }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/gOLos_N33sgfTa2gWSVdcAxcqt0" }];
+                    attributes = [{ name = "alt"; value = ?"" }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/gOLos_N33sgfTa2gWSVdcAxcqt0=/0x0:2040x1360/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/70735423/STK171_VRG_Illo_5_Normand_ElonMusk_05.5.jpg" }];
                     name = "img";
                     selfClosing = true;
                 }),
@@ -755,7 +938,7 @@ module {
                     selfClosing = false;
                 }),
                 #startTag({
-                    attributes = [{ name = "alt"; value = ?"An illustration of the Twitter logo." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/zQLVeU7EwVTBQLHivgfUFyqWqvM" }];
+                    attributes = [{ name = "alt"; value = ?"An illustration of the Twitter logo." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/zQLVeU7EwVTBQLHivgfUFyqWqvM=/0x0:3000x2000/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659669/acastro_STK050_06.5.jpg" }];
                     name = "img";
                     selfClosing = true;
                 }),
@@ -887,7 +1070,7 @@ module {
                     selfClosing = false;
                 }),
                 #startTag({
-                    attributes = [{ name = "alt"; value = ?"Nilay Patel holds an iPhone 14 Pro in his hands." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/fy-1OSl08rP0neOAsPVBx3gB7kM" }];
+                    attributes = [{ name = "alt"; value = ?"Nilay Patel holds an iPhone 14 Pro in his hands." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/fy-1OSl08rP0neOAsPVBx3gB7kM=/0x0:2040x1360/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659548/226270_iPHONE_14_PHO_akrales_0030.0.jpg" }];
                     name = "img";
                     selfClosing = true;
                 }),
@@ -1000,7 +1183,7 @@ module {
                     selfClosing = false;
                 }),
                 #startTag({
-                    attributes = [{ name = "alt"; value = ?"" }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/eYqZ0c_m283srxzRlmzfjkoh_pQ" }];
+                    attributes = [{ name = "alt"; value = ?"" }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/eYqZ0c_m283srxzRlmzfjkoh_pQ=/119x0:1952x1222/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659501/Screenshot_2022_11_21_at_14.03.07.0.png" }];
                     name = "img";
                     selfClosing = true;
                 }),
@@ -1117,7 +1300,7 @@ module {
                     selfClosing = false;
                 }),
                 #startTag({
-                    attributes = [{ name = "alt"; value = ?"A colorful graphical illustration of the Disney Plus logo." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/LBZpzWdUUjxgvybEwhbunWt_HHw" }];
+                    attributes = [{ name = "alt"; value = ?"A colorful graphical illustration of the Disney Plus logo." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/LBZpzWdUUjxgvybEwhbunWt_HHw=/0x0:2040x1360/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71655348/acastro_STK080_disneyPlus_02.0.jpg" }];
                     name = "img";
                     selfClosing = true;
                 }),
@@ -1315,7 +1498,7 @@ module {
                     selfClosing = false;
                 }),
                 #startTag({
-                    attributes = [{ name = "alt"; value = ?"Google’s Pixel Buds Pro earbuds, in yellow lemongrass color, resting at the foot of their white charging case on a tabletop." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/iYwRuqLOBOqomCH1lG0lDWFheGA" }];
+                    attributes = [{ name = "alt"; value = ?"Google’s Pixel Buds Pro earbuds, in yellow lemongrass color, resting at the foot of their white charging case on a tabletop." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/iYwRuqLOBOqomCH1lG0lDWFheGA=/0x0:2040x1360/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659281/DSCF8502.0.jpg" }];
                     name = "img";
                     selfClosing = true;
                 }),
@@ -1355,7 +1538,7 @@ module {
                     selfClosing = false;
                 }),
                 #startTag({
-                    attributes = [{ name = "data-anthem-component"; value = ?"readmore" }, { name = "data-anthem-component-data"; value = ?"'{stories:[{title:The Verge Holiday Gift Guide 2022,url:https://www.theverge.com/23435489/holiday-gift-guide-best-ideas-cool-tech},{title:The best early Black Friday deals you can already get,url:https://www.theverge.com/23438688/black-friday-2022-best-early-deals-tech-tv-apple-smart-home},{title:Know the price-matching policies for Best Buy, Target, Walmart, and others,url:https://www.theverge.com/21570383/price-matching-policy-apple-google-microsoft}]}'" }];
+                    attributes = [{ name = "data-anthem-component"; value = ?"readmore" }, { name = "data-anthem-component-data"; value = ?"'{\"stories\":[{\"title\":\"The Verge Holiday Gift Guide 2022\",\"url\":\"https://www.theverge.com/23435489/holiday-gift-guide-best-ideas-cool-tech\"},{\"title\":\"The best early Black Friday deals you can already get\",\"url\":\"https://www.theverge.com/23438688/black-friday-2022-best-early-deals-tech-tv-apple-smart-home\"},{\"title\":\"Know the price-matching policies for Best Buy, Target, Walmart, and others\",\"url\":\"https://www.theverge.com/21570383/price-matching-policy-apple-google-microsoft\"}]}'" }];
                     name = "div";
                     selfClosing = false;
                 }),
@@ -1564,7 +1747,7 @@ module {
                         }),
                         #element({
                             attributes = [];
-                            children = #open([#element({ attributes = []; children = #open([#text("2022-11-21T17:51:41-05:00")]); name = "published" }), #element({ attributes = []; children = #open([#text("2022-11-21T17:51:41-05:00")]); name = "updated" }), #element({ attributes = []; children = #open([#text("The best Black Friday deals you can already get at Amazon")]); name = "title" }), #element({ attributes = [{ name = "type"; value = ?"html" }]; children = #open([#element({ attributes = []; children = #open([#element({ attributes = [{ name = "alt"; value = ?"Google’s Pixel Buds Pro earbuds, in yellow lemongrass color, resting at the foot of their white charging case on a tabletop." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/iYwRuqLOBOqomCH1lG0lDWFheGA" }]; children = #selfClosing; name = "img" }), #element({ attributes = []; children = #open([#element({ attributes = []; children = #open([#text("Amazon’s Black Friday discounts extend to more than just Amazon devices.")]); name = "em" }), #text("| Photo by Chris Welch / The Verge")]); name = "figcaption" })]); name = "figure" }), #element({ attributes = [{ name = "id"; value = ?"aRKQfH" }]; children = #open([#text("Black Friday is right around the corner, but Amazon is wasting no time by rolling out some excellent deals in the run-up to the main event on Friday. If you’re looking to knock out some of your holiday shopping early, we’ve rounded up a small collection of all the best discounts you can currently get on wireless headphones, 4K TVs, tablets, and more. ")]); name = "p" }), #element({ attributes = [{ name = "class"; value = ?"c-float-left c-float-hang" }]; children = #open([#element({ attributes = [{ name = "id"; value = ?"ABSC8o" }]; children = #open([#element({ attributes = [{ name = "data-anthem-component"; value = ?"readmore" }, { name = "data-anthem-component-data"; value = ?"'{stories:[{title:The Verge Holiday Gift Guide 2022,url:https://www.theverge.com/23435489/holiday-gift-guide-best-ideas-cool-tech},{title:The best early Black Friday deals you can already get,url:https://www.theverge.com/23438688/black-friday-2022-best-early-deals-tech-tv-apple-smart-home},{title:Know the price-matching policies for Best Buy, Target, Walmart, and others,url:https://www.theverge.com/21570383/price-matching-policy-apple-google-microsoft}]}'" }]; children = #open([]); name = "div" })]); name = "aside" })]); name = "div" }), #element({ attributes = [{ name = "id"; value = ?"HtHGHM" }]; children = #open([#text("If you’re looking for discounts at other retailers, we’ve also put together roundups of the best deals you can find ahead of Black Friday at"), #element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/e/23197114" }]; children = #open([#text("Target")]); name = "a" }), #text(","), #element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/e/23160805" }]; children = #open([#text("Best Buy")]); name = "a" }), #text(", and"), #element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/e/23204521" }]; children = #open([#text("Walmart")]); name = "a" }), #text(". To stay up to speed with everything happening over Black Friday and Cyber Monday, make sure to bookmark our"), #element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/e/23197880" }]; children = #open([#text("Black Friday hub")]); name = "a" }), #text("and check back for regular updates.")]); name = "p" }), #element({ attributes = [{ name = "id"; value = ?"hjLr4p" }]; children = #open([#element({ attributes = [{ name = "rel"; value = ?"stylesheet" }, { name = "href"; value = ?"https://s3.amazonaws.com/assets.sbnation.com/csk/uploads/verge-toc.css" }]; children = #selfClosing; name = "link" }), #element({ attributes = [{ name = "class"; value = ?"duet--article--article-body-component verge-table-of-contents border-franklin border" }, { name = "id"; value = ?"toc-main" }]; children = #open([]); name = "div" })]); name = "div" }), #element({ attributes = [{ name = "class"; value = ?"p-entry-hr" }, { name = "id"; value = ?"MUyQMv" }]; children = #selfClosing; name = "hr" }), #element({ attributes = [{ name = "id"; value = ?"oQgeHw" }]; children = #open([#text("The best Amazon Black Friday deals on Echo...")]); name = "h2" }), #element({ attributes = []; children = #open([#element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/23466456/amazon-black-friday-2022-deals-cyber-monday-tech-games-tv" }]; children = #open([#text("Continue reading&hellip;")]); name = "a" })]); name = "p" })]); name = "content" }), #element({ attributes = [{ name = "rel"; value = ?"alternate" }, { name = "type"; value = ?"text/html" }, { name = "href"; value = ?"https://www.theverge.com/23466456/amazon-black-friday-2022-deals-cyber-monday-tech-games-tv" }]; children = #selfClosing; name = "link" }), #element({ attributes = []; children = #open([#text("https://www.theverge.com/23466456/amazon-black-friday-2022-deals-cyber-monday-tech-games-tv")]); name = "id" }), #element({ attributes = []; children = #open([#element({ attributes = []; children = #open([#text("Alice Newcome-Beill")]); name = "name" })]); name = "author" })]);
+                            children = #open([#element({ attributes = []; children = #open([#text("2022-11-21T17:51:41-05:00")]); name = "published" }), #element({ attributes = []; children = #open([#text("2022-11-21T17:51:41-05:00")]); name = "updated" }), #element({ attributes = []; children = #open([#text("The best Black Friday deals you can already get at Amazon")]); name = "title" }), #element({ attributes = [{ name = "type"; value = ?"html" }]; children = #open([#element({ attributes = []; children = #open([#element({ attributes = [{ name = "alt"; value = ?"Google’s Pixel Buds Pro earbuds, in yellow lemongrass color, resting at the foot of their white charging case on a tabletop." }, { name = "src"; value = ?"https://cdn.vox-cdn.com/thumbor/iYwRuqLOBOqomCH1lG0lDWFheGA" }]; children = #selfClosing; name = "img" }), #element({ attributes = []; children = #open([#element({ attributes = []; children = #open([#text("Amazon’s Black Friday discounts extend to more than just Amazon devices.")]); name = "em" }), #text("| Photo by Chris Welch / The Verge")]); name = "figcaption" })]); name = "figure" }), #element({ attributes = [{ name = "id"; value = ?"aRKQfH" }]; children = #open([#text("Black Friday is right around the corner, but Amazon is wasting no time by rolling out some excellent deals in the run-up to the main event on Friday. If you’re looking to knock out some of your holiday shopping early, we’ve rounded up a small collection of all the best discounts you can currently get on wireless headphones, 4K TVs, tablets, and more. ")]); name = "p" }), #element({ attributes = [{ name = "class"; value = ?"c-float-left c-float-hang" }]; children = #open([#element({ attributes = [{ name = "id"; value = ?"ABSC8o" }]; children = #open([#element({ attributes = [{ name = "data-anthem-component"; value = ?"readmore" }, { name = "data-anthem-component-data"; value = ?"'{\"stories\":[{\"title\":\"The Verge Holiday Gift Guide 2022\",\"url\":\"https://www.theverge.com/23435489/holiday-gift-guide-best-ideas-cool-tech\"},{\"title\":\"The best early Black Friday deals you can already get\",\"url\":\"https://www.theverge.com/23438688/black-friday-2022-best-early-deals-tech-tv-apple-smart-home\"},{\"title\":\"Know the price-matching policies for Best Buy, Target, Walmart, and others\",\"url\":\"https://www.theverge.com/21570383/price-matching-policy-apple-google-microsoft\"}]}'" }]; children = #open([]); name = "div" })]); name = "aside" })]); name = "div" }), #element({ attributes = [{ name = "id"; value = ?"HtHGHM" }]; children = #open([#text("If you’re looking for discounts at other retailers, we’ve also put together roundups of the best deals you can find ahead of Black Friday at"), #element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/e/23197114" }]; children = #open([#text("Target")]); name = "a" }), #text(","), #element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/e/23160805" }]; children = #open([#text("Best Buy")]); name = "a" }), #text(", and"), #element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/e/23204521" }]; children = #open([#text("Walmart")]); name = "a" }), #text(". To stay up to speed with everything happening over Black Friday and Cyber Monday, make sure to bookmark our"), #element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/e/23197880" }]; children = #open([#text("Black Friday hub")]); name = "a" }), #text("and check back for regular updates.")]); name = "p" }), #element({ attributes = [{ name = "id"; value = ?"hjLr4p" }]; children = #open([#element({ attributes = [{ name = "rel"; value = ?"stylesheet" }, { name = "href"; value = ?"https://s3.amazonaws.com/assets.sbnation.com/csk/uploads/verge-toc.css" }]; children = #selfClosing; name = "link" }), #element({ attributes = [{ name = "class"; value = ?"duet--article--article-body-component verge-table-of-contents border-franklin border" }, { name = "id"; value = ?"toc-main" }]; children = #open([]); name = "div" })]); name = "div" }), #element({ attributes = [{ name = "class"; value = ?"p-entry-hr" }, { name = "id"; value = ?"MUyQMv" }]; children = #selfClosing; name = "hr" }), #element({ attributes = [{ name = "id"; value = ?"oQgeHw" }]; children = #open([#text("The best Amazon Black Friday deals on Echo...")]); name = "h2" }), #element({ attributes = []; children = #open([#element({ attributes = [{ name = "href"; value = ?"https://www.theverge.com/23466456/amazon-black-friday-2022-deals-cyber-monday-tech-games-tv" }]; children = #open([#text("Continue reading&hellip;")]); name = "a" })]); name = "p" })]); name = "content" }), #element({ attributes = [{ name = "rel"; value = ?"alternate" }, { name = "type"; value = ?"text/html" }, { name = "href"; value = ?"https://www.theverge.com/23466456/amazon-black-friday-2022-deals-cyber-monday-tech-games-tv" }]; children = #selfClosing; name = "link" }), #element({ attributes = []; children = #open([#text("https://www.theverge.com/23466456/amazon-black-friday-2022-deals-cyber-monday-tech-games-tv")]); name = "id" }), #element({ attributes = []; children = #open([#element({ attributes = []; children = #open([#text("Alice Newcome-Beill")]); name = "name" })]); name = "author" })]);
                             name = "entry";
                         }),
                     ]);
