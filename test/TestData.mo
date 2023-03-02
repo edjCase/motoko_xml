@@ -2,6 +2,7 @@ import Tokenizer "../src/Tokenizer";
 import Parser "../src/Parser";
 import Token "../src/Token";
 import Document "../src/Document";
+import Element "../src/Element";
 
 module {
 
@@ -10,6 +11,7 @@ module {
         raw : Text;
         tokens : [Token.Token];
         doc : Document.Document;
+        processedElement : Element.Element;
     };
     public let examples : [Example] = [
         {
@@ -34,6 +36,11 @@ module {
                 standalone = null;
                 version = null;
                 docType = null;
+            };
+            processedElement = {
+                attributes = [];
+                children = [];
+                name = "root";
             };
         },
         {
@@ -60,6 +67,13 @@ module {
                 version = null;
                 docType = null;
             };
+            processedElement = {
+                attributes = [];
+                children = [
+                    #text("<>&'\"{🤣")
+                ];
+                name = "root";
+            };
         },
         {
             name = "CDATA Tag";
@@ -70,7 +84,7 @@ module {
                     name = "root";
                     selfClosing = false;
                 }),
-                #text("You will see this in the document and can use reserved characters like < > & \""),
+                #cdata("You will see this in the document and can use reserved characters like < > & \""),
                 #endTag({ name = "root" }),
             ];
             doc = {
@@ -78,12 +92,19 @@ module {
                 processInstructions = [];
                 root = {
                     attributes = [];
-                    children = #open([#text("You will see this in the document and can use reserved characters like < > & \"")]);
+                    children = #open([#cdata("You will see this in the document and can use reserved characters like < > & \"")]);
                     name = "root";
                 };
                 standalone = null;
                 version = null;
                 docType = null;
+            };
+            processedElement = {
+                attributes = [];
+                children = [
+                    #text("You will see this in the document and can use reserved characters like < > & \"")
+                ];
+                name = "root";
             };
         },
         {
@@ -109,6 +130,11 @@ module {
                 standalone = null;
                 version = null;
                 docType = null;
+            };
+            processedElement = {
+                attributes = [];
+                children = [];
+                name = "root";
             };
         },
         {
@@ -174,6 +200,22 @@ module {
                 standalone = null;
                 version = ?{ major = 1; minor = 0 };
                 docType = null;
+            };
+            processedElement = {
+                attributes = [{ name = "a"; value = ?"b" }, { name = "c"; value = ?"d" }];
+                children = [
+                    #element({
+                        attributes = [{ name = "t"; value = ?"5" }];
+                        children = [];
+                        name = "mid";
+                    }),
+                    #element({
+                        attributes = [];
+                        children = [#text("Content")];
+                        name = "bottom";
+                    }),
+                ];
+                name = "top";
             };
         },
         {
@@ -395,6 +437,11 @@ module {
                 standalone = null;
                 version = null;
             };
+            processedElement = {
+                attributes = [];
+                children = [];
+                name = "root";
+            };
         },
         {
             name = "DOCTYPE ATTLIST";
@@ -550,10 +597,15 @@ module {
                 standalone = null;
                 version = null;
             };
+            processedElement = {
+                attributes = [];
+                children = [];
+                name = "root";
+            };
         },
         {
             name = "DOCTYPE ENTITY";
-            raw = "<!DOCTYPE root [ <!ENTITY n1 \"v1\"> <!ENTITY n2 SYSTEM \"Uri1\"> <!ENTITY n3 PUBLIC \"Id1\" \"Uri2\"> <!ENTITY n4 SYSTEM \"Uri3\" NDATA nd1> <!ENTITY n5 PUBLIC \"Id2\" \"Uri4\" NDATA nd2> <!ENTITY % n6 \"v2\"> <!ENTITY % n7 SYSTEM \"Uri5\"> <!ENTITY % n8 PUBLIC \"Id3\" \"Uri6\"> ]\n><root></root>";
+            raw = "<!DOCTYPE root [ <!ENTITY n1 \"v1\"> <!ENTITY n2 SYSTEM \"Uri1\"> <!ENTITY n3 PUBLIC \"Id1\" \"Uri2\"> <!ENTITY n4 SYSTEM \"Uri3\" NDATA nd1> <!ENTITY n5 PUBLIC \"Id2\" \"Uri4\" NDATA nd2> <!ENTITY % n6 \"v2\"> <!ENTITY % n7 SYSTEM \"Uri5\"> <!ENTITY % n8 PUBLIC \"Id3\" \"Uri6\"> <!ENTITY n9 \"%n6\"> ]\n><root>&n1;&n2;&n3;&n4;&n5;&n9;</root>";
             tokens = [
                 #docType({
                     rootElementName = "root";
@@ -616,6 +668,10 @@ module {
                                     });
                                 });
                             }),
+                            #generalEntity({
+                                name = "n9";
+                                type_ = #internal("%n6");
+                            }),
                         ];
                     };
                 }),
@@ -624,6 +680,7 @@ module {
                     attributes = [];
                     selfClosing = false;
                 }),
+                #text("&n1;&n2;&n3;&n4;&n5;&n9;"),
                 #endTag({ name = "root" }),
             ];
             doc = {
@@ -688,14 +745,31 @@ module {
                                     });
                                 });
                             }),
+                            #generalEntity({
+                                name = "n9";
+                                type_ = #internal("%n6");
+                            }),
                         ];
                     };
                 };
                 encoding = null;
                 processInstructions = [];
-                root = { attributes = []; children = #open([]); name = "root" };
+                root = {
+                    attributes = [];
+                    children = #open([
+                        #text("&n1;&n2;&n3;&n4;&n5;&n9;")
+                    ]);
+                    name = "root";
+                };
                 standalone = null;
                 version = null;
+            };
+            processedElement = {
+                attributes = [];
+                children = [
+                    #text("v1&n2;&n3;&n4;&n5;v2") // Dont support external entity replacement
+                ];
+                name = "root";
             };
         },
         {
@@ -772,6 +846,11 @@ module {
                 standalone = null;
                 version = null;
             };
+            processedElement = {
+                attributes = [];
+                children = [];
+                name = "root";
+            };
         },
         {
             name = "DOCTYPE COMMENT";
@@ -808,6 +887,11 @@ module {
                 root = { attributes = []; children = #open([]); name = "root" };
                 standalone = null;
                 version = null;
+            };
+            processedElement = {
+                attributes = [];
+                children = [];
+                name = "root";
             };
         },
         {
@@ -1545,6 +1629,334 @@ module {
                 };
                 standalone = null;
                 version = ?{ major = 1; minor = 0 };
+            };
+            processedElement = {
+                attributes = [
+                    { name = "xmlns"; value = ?"http://www.w3.org/2005/Atom" },
+                    { name = "xml:lang"; value = ?"en" },
+                ];
+                children = [
+                    #element({
+                        attributes = [];
+                        children = [#text("The Verge - All Posts")];
+                        name = "title";
+                    }),
+                    #element({
+                        attributes = [];
+                        children = [
+                            #text("https://cdn.vox-cdn.com/community_logos/52801/VER_Logomark_32x32..png")
+                        ];
+                        name = "icon";
+                    }),
+                    #element({
+                        attributes = [];
+                        children = [#text("2022-11-21T21:30:42-05:00")];
+                        name = "updated";
+                    }),
+                    #element({
+                        attributes = [];
+                        children = [
+                            #text("https://www.theverge.com/rss/full.xml")
+                        ];
+                        name = "id";
+                    }),
+                    #element({
+                        attributes = [
+                            { name = "type"; value = ?"text/html" },
+                            {
+                                name = "href";
+                                value = ?"https://www.theverge.com/";
+                            },
+                            { name = "rel"; value = ?"alternate" },
+                        ];
+                        children = [];
+                        name = "link";
+                    }),
+                    #element({
+                        attributes = [];
+                        children = [
+                            #element({
+                                attributes = [];
+                                children = [#text("2022-11-21T21:30:42-05:00")];
+                                name = "published";
+                            }),
+                            #element({
+                                attributes = [];
+                                children = [#text("2022-11-21T21:30:42-05:00")];
+                                name = "updated";
+                            }),
+                            #element({
+                                attributes = [];
+                                children = [#text("Twitter is making DMs encrypted and adding video, voice chat, per Elon Musk")];
+                                name = "title";
+                            }),
+                            #element({
+                                attributes = [{ name = "type"; value = ?"html" }];
+                                children = [
+                                    #element({
+                                        attributes = [];
+                                        children = [
+                                            #element({
+                                                attributes = [
+                                                    {
+                                                        name = "alt";
+                                                        value = ?"An illustration of the Twitter logo";
+                                                    },
+                                                    {
+                                                        name = "src";
+                                                        value = ?"https://cdn.vox-cdn.com/thumbor/6kBqimyOvt-iCvNDVhv2okF4ey4=/0x0:3000x2000/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659917/acastro_STK050_04.0.jpg";
+                                                    },
+                                                ];
+                                                children = [];
+                                                name = "img";
+                                            }),
+                                            #element({
+                                                attributes = [];
+                                                children = [#text("Illustration by Alex Castro / The Verge")];
+                                                name = "figcaption";
+                                            }),
+                                        ];
+                                        name = "figure";
+                                    }),
+                                    #element({
+                                        attributes = [{
+                                            name = "id";
+                                            value = ?"TvAhZo";
+                                        }];
+                                        children = [
+                                            #text("Twitter’s new owner, Elon Musk, has been public about his desire to improve how the social network’s direct messages work. In a meeting with employees today, he spelled out exactly what that looks like.")
+                                        ];
+                                        name = "p";
+                                    }),
+                                    #element({
+                                        attributes = [{
+                                            name = "id";
+                                            value = ?"6MmlUD";
+                                        }];
+                                        children = [
+                                            #text("Framed by presentation slides titled “Twitter 2.0” at Twitter’s San Fransisco headquarters on Monday, Musk told employees that the company would encrypt DMs and work to add encrypted video and voice calling between accounts, according to a recording of the meeting obtained by"),
+                                            #element({
+                                                attributes = [];
+                                                children = [#text("The Verge")];
+                                                name = "em";
+                                            }),
+                                            #text("."),
+                                        ];
+                                        name = "p";
+                                    }),
+                                    #element({
+                                        attributes = [{
+                                            name = "id";
+                                            value = ?"Z8NlgY";
+                                        }];
+                                        children = [
+                                            #text("“We want to enable users to be able to communicate without being concerned about their privacy, [or] without being concerned about a data breach at Twitter causing all of their DMs to hit the web, or think that maybe someone at Twitter could be spying on...")
+                                        ];
+                                        name = "p";
+                                    }),
+                                    #element({
+                                        attributes = [];
+                                        children = [
+                                            #element({
+                                                attributes = [{
+                                                    name = "href";
+                                                    value = ?"https://www.theverge.com/2022/11/21/23472174/twitter-dms-encrypted-elon-musk-voice-video-calling";
+                                                }];
+                                                children = [#text("Continue reading&hellip;")];
+                                                name = "a";
+                                            })
+                                        ];
+                                        name = "p";
+                                    }),
+                                ];
+                                name = "content";
+                            }),
+                            #element({
+                                attributes = [
+                                    { name = "rel"; value = ?"alternate" },
+                                    { name = "type"; value = ?"text/html" },
+                                    {
+                                        name = "href";
+                                        value = ?"https://www.theverge.com/2022/11/21/23472174/twitter-dms-encrypted-elon-musk-voice-video-calling";
+                                    },
+                                ];
+                                children = [];
+                                name = "link";
+                            }),
+                            #element({
+                                attributes = [];
+                                children = [#text("https://www.theverge.com/2022/11/21/23472174/twitter-dms-encrypted-elon-musk-voice-video-calling")];
+                                name = "id";
+                            }),
+                            #element({
+                                attributes = [];
+                                children = [#element({ attributes = []; children = [#text("Alex Heath")]; name = "name" })];
+                                name = "author";
+                            }),
+                        ];
+                        name = "entry";
+                    }),
+                    #element({
+                        attributes = [];
+                        children = [
+                            #element({
+                                attributes = [];
+                                children = [#text("2022-11-21T20:24:25-05:00")];
+                                name = "published";
+                            }),
+                            #element({
+                                attributes = [];
+                                children = [#text("2022-11-21T20:24:25-05:00")];
+                                name = "updated";
+                            }),
+                            #element({
+                                attributes = [];
+                                children = [#text("Domino’s is building an all-electric pizza delivery fleet with Chevy Bolts")];
+                                name = "title";
+                            }),
+                            #element({
+                                attributes = [{ name = "type"; value = ?"html" }];
+                                children = [
+                                    #element({
+                                        attributes = [];
+                                        children = [
+                                            #element({
+                                                attributes = [
+                                                    {
+                                                        name = "alt";
+                                                        value = ?"Two chevy bolt ev cars, wrapped in domino’s artwork are parked in front of a domino’s pizza store with one of the cars hooked up to a charger.";
+                                                    },
+                                                    {
+                                                        name = "src";
+                                                        value = ?"https://cdn.vox-cdn.com/thumbor/uraUyO3VeLJ8RJ6ethB54sPF1bs=/0x1:2048x1366/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659802/Dominos_Chevy_Bolt_EVs_08.0.jpg";
+                                                    },
+                                                ];
+                                                children = [];
+                                                name = "img";
+                                            }),
+                                            #element({
+                                                attributes = [];
+                                                children = [
+                                                    #element({
+                                                        attributes = [];
+                                                        children = [#text("Domino’s outfitted Chevy Bolts.")];
+                                                        name = "em";
+                                                    }),
+                                                    #text("| Image: Domino’s"),
+                                                ];
+                                                name = "figcaption";
+                                            }),
+                                        ];
+                                        name = "figure";
+                                    }),
+                                    #element({
+                                        attributes = [{
+                                            name = "id";
+                                            value = ?"1PMpbG";
+                                        }];
+                                        children = [
+                                            #text("Domino’s is gearing up to put"),
+                                            #element({
+                                                attributes = [{
+                                                    name = "href";
+                                                    value = ?"https://ir.dominos.com/news-releases/news-release-details/dominosr-roll-out-nationwide-fleet-800-chevy-boltr-electric";
+                                                }];
+                                                children = [#text("more than 800 all-electric pizza delivery vehicles into service")];
+                                                name = "a";
+                                            }),
+                                            #text("in the coming months, starting with over 100 of them rolling out in November. The company went with the compact Chevy Bolt EV and is wrapping the vehicles with custom branding but no other bells and whistles — just combustion-free deliveries (via"),
+                                            #element({
+                                                attributes = [{
+                                                    name = "href";
+                                                    value = ?"https://electrek.co/2022/11/21/dominos-acquires-800-chevy-bolts-evs-for-delivery-fleet/";
+                                                }];
+                                                children = [#element({ attributes = []; children = [#text("electrek")]; name = "em" })];
+                                                name = "a";
+                                            }),
+                                            #text(")."),
+                                        ];
+                                        name = "p";
+                                    }),
+                                    #element({
+                                        attributes = [{
+                                            name = "id";
+                                            value = ?"Lo1Jmp";
+                                        }];
+                                        children = [
+                                            #text("Domino will have a fleet of 855 new electric vehicles, to be exact, and while that’s not quite enough to reach"),
+                                            #element({
+                                                attributes = [{
+                                                    name = "href";
+                                                    value = ?"https://ir.dominos.com/static-files/4daec873-268e-4456-b541-3871f28288e2";
+                                                }];
+                                                children = [#text("all 6,135 of the pizza shops in the US")];
+                                                name = "a";
+                                            }),
+                                            #text(", it's more than the Chevy Spark-based (gas version) ones it built with"),
+                                            #element({
+                                                attributes = [{
+                                                    name = "href";
+                                                    value = ?"https://www.theverge.com/2015/10/21/9587270/dominos-dxp-delivery-car-chevy-spark-pizza";
+                                                }];
+                                                children = [#text("custom pizza warming oven doors")];
+                                                name = "a";
+                                            }),
+                                            #text("in 2015. Those were called the Domino’s DXP, and only 155 of them were made. For the new Bolts, drivers will need to toss the HeatWave bags in..."),
+                                        ];
+                                        name = "p";
+                                    }),
+                                    #element({
+                                        attributes = [];
+                                        children = [
+                                            #element({
+                                                attributes = [{
+                                                    name = "href";
+                                                    value = ?"https://www.theverge.com/2022/11/21/23472002/dominos-chevy-bolt-ev-pizza-delivery-fleet-rollout";
+                                                }];
+                                                children = [#text("Continue reading&hellip;")];
+                                                name = "a";
+                                            })
+                                        ];
+                                        name = "p";
+                                    }),
+                                ];
+                                name = "content";
+                            }),
+                            #element({
+                                attributes = [
+                                    { name = "rel"; value = ?"alternate" },
+                                    { name = "type"; value = ?"text/html" },
+                                    {
+                                        name = "href";
+                                        value = ?"https://www.theverge.com/2022/11/21/23472002/dominos-chevy-bolt-ev-pizza-delivery-fleet-rollout";
+                                    },
+                                ];
+                                children = [];
+                                name = "link";
+                            }),
+                            #element({
+                                attributes = [];
+                                children = [
+                                    #text("https://www.theverge.com/2022/11/21/23472002/dominos-chevy-bolt-ev-pizza-delivery-fleet-rollout")
+                                ];
+                                name = "id";
+                            }),
+                            #element({
+                                attributes = [];
+                                children = [
+                                    #element({
+                                        attributes = [];
+                                        children = [#text("Umar Shakir")];
+                                        name = "name";
+                                    })
+                                ];
+                                name = "author";
+                            }),
+                        ];
+                        name = "entry";
+                    }),
+                ];
+                name = "feed";
             };
         },
     ];

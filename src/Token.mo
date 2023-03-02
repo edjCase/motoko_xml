@@ -6,6 +6,7 @@ module {
         #startTag : StartTagInfo;
         #endTag : { name : Text };
         #text : Text;
+        #cdata : Text;
         #comment : Text;
         #xmlDeclaration : XmlDeclaration;
         #processingInstruction : Document.ProcessingInstruction;

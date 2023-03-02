@@ -140,6 +140,9 @@ module {
                 case (?#comment(c)) {
                     children.add(#comment(c));
                 };
+                case (?#cdata(c)) {
+                    children.add(#cdata(c));
+                };
                 case (?t) return #error(#unexpectedToken(t));
             };
         };

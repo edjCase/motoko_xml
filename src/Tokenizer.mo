@@ -726,7 +726,7 @@ module {
     };
 
     private func parseCDATA(slice : TextSlice.TextSlice) : Result<Token.Token> {
-        #ok(#text(slice.toText()));
+        #ok(#cdata(slice.toText()));
     };
 
     private func parseStartTag(slice : TextSlice.TextSlice) : Result<Token.Token> {

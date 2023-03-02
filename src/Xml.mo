@@ -6,55 +6,140 @@ import Tokenizer "Tokenizer";
 import Parser "Parser";
 import Blob "mo:base/Blob";
 import Debug "mo:base/Debug";
+import Element "Element";
+import Document "Document";
+import Token "Token";
+import NatX "mo:xtended-numbers/NatX";
+import Char "mo:base/Char";
+import Prelude "mo:base/Prelude";
+import Nat32 "mo:base/Nat32";
+import TrieMap "mo:base/TrieMap";
 
 module {
 
-    public type DecodeDocumentError = Parser.ParseError or {
-        #tokenizeError : Text;
-    };
+    type Result<T> = { #ok : T; #error : Text };
 
-    public type DecodeError = DecodeDocumentError or {
-        #rootElementError : Types.RootElementError;
-    };
-
-    public type DecodeResult = {
-        #ok : Types.RootElement;
-        #error : DecodeError;
-    };
-
-    public type DecodeDocumentResult = {
-        #ok : Types.Document;
-        #error : DecodeDocumentError;
-    };
-
-    public func decode(bytes : Blob) : DecodeResult {
-        let document = switch (decodeDocument(bytes)) {
-            case (#error(e)) return #error(e);
-            case (#ok(d)) d;
-        };
-        return #ok(document);
-    };
-
-    public func decodeDocument(bytes : Blob) : DecodeDocumentResult {
-        let tokens : [Types.Token] = switch (Tokenizer.tokenizeBlob(bytes)) {
-            case (#error(e)) return #error(#tokenizeError(e));
+    public func decode(bytes : Blob) : Result<Element.Element> {
+        let tokens : [Token.Token] = switch (Tokenizer.tokenizeBlob(bytes)) {
+            case (#error(e)) return #error("Tokenizer error: " # e);
             case (#ok(t)) t;
         };
-        return Parser.parseDocument(Iter.fromArray(tokens));
+        let doc = switch (Parser.parseDocument(Iter.fromArray(tokens))) {
+            case (#error(e)) {
+                let message = switch (e) {
+                    case (#unexpectedToken(t)) "Unexpected token '" # debug_show (t) # "'";
+                    case (#unexpectedEndOfTokens) "Unexpected end of input";
+                    case (#tokensAfterRoot) "Tokens are not allowed after the root element";
+                };
+                return #error("Parser error: " # message);
+            };
+            case (#ok(d)) d;
+        };
+        processDocument(doc);
     };
 
-    private func decodeTextValue(buffer : Buffer.Buffer<Char>) : Result<Text> {
-        let decodedTexcharBuffer = Buffer.Buffer<Char>(buffer.size());
+    private func processDocument(document : Document.Document) : Result<Element.Element> {
+        let defaultEntries = Iter.fromArray([
+            ("amp", "&"),
+            ("apos", "'"),
+            ("gt", ">"),
+            ("lt", "<"),
+            ("quot", "\""),
+        ]);
+        let entityMap = TrieMap.fromEntries<Text, Text>(defaultEntries, Text.equal, Text.hash);
+        addEntities(document.docType, entityMap);
+        processElement(document.root, entityMap);
+    };
+
+    private func addEntities(docType : ?Document.DocType, entityMap : TrieMap.TrieMap<Text, Text>) {
+        switch (docType) {
+            case (null)();
+            case (?d) {
+                let paramerterEntityMap = TrieMap.TrieMap<Text, Text>(Text.equal, Text.hash);
+                // Add any parameter entities first, to potentially replace the entity values
+                for (internalType in Iter.fromArray(d.typeDefinition.internalTypes)) {
+                    switch (internalType) {
+                        case (#parameterEntity({ name = n; type_ = #internal(v) })) {
+                            paramerterEntityMap.put(("%" # n, v));
+                        };
+                        case (_)();
+                    };
+                };
+                // Add any general entity values
+                for (internalType in Iter.fromArray(d.typeDefinition.internalTypes)) {
+                    switch (internalType) {
+                        case (#generalEntity({ name = n; type_ = #internal(v) })) {
+                            let realV = switch (paramerterEntityMap.get(v)) {
+                                case (null) v; // If not found, use the value as is
+                                case (?parameterV) parameterV; // Replace with parameter value
+                            };
+                            entityMap.put((n, realV));
+                        };
+                        case (_)();
+                    };
+                };
+            };
+        };
+    };
+
+    private func processElement(element : Document.Element, entityMap : TrieMap.TrieMap<Text, Text>) : Result<Element.Element> {
+        let children : [Element.ElementChild] = switch (element.children) {
+            case (#open(children)) {
+                let childrenBuffer = Buffer.Buffer<Element.ElementChild>(children.size());
+                for (child in Iter.fromArray(children)) {
+                    switch (processElementChild(child, entityMap)) {
+                        case (#error(e)) return #error(e);
+                        case (#ok(null))(); // Skip (comments)
+                        case (#ok(?c)) childrenBuffer.add(c);
+                    };
+                };
+                Buffer.toArray(childrenBuffer);
+            };
+            case (#selfClosing)[];
+        };
+
+        #ok({
+            name = element.name;
+            attributes = element.attributes;
+            children = children;
+        });
+    };
+
+    private func processElementChild(
+        child : Document.ElementChild,
+        entityMap : TrieMap.TrieMap<Text, Text>,
+    ) : Result<?Element.ElementChild> {
+        let processedChild = switch (child) {
+            case (#element(e)) {
+                switch (processElement(e, entityMap)) {
+                    case (#error(e)) return #error(e);
+                    case (#ok(e)) ?#element(e);
+                };
+            };
+            case (#text(t)) {
+                switch (processText(t, entityMap)) {
+                    case (#error(e)) return #error(e);
+                    case (#ok(t)) ?#text(t);
+                };
+            };
+            case (#comment(c)) null;
+            case (#cdata(c)) ?#text(c); // Dont process CDATA
+        };
+        #ok(processedChild);
+    };
+
+    private func processText(text : Text, entityMap : TrieMap.TrieMap<Text, Text>) : Result<Text> {
+        let decodedTexcharBuffer = Buffer.Buffer<Char>(text.size());
         let referenceValueBuffer = Buffer.Buffer<Char>(4);
         var inAmp = false;
-        for (c in buffer.vals()) {
+        for (c in text.chars()) {
             // If characters are between & and ; then they are a reference
             // to a value. This does the translation if it can
             if (inAmp) {
                 if (c == ';') {
                     inAmp := false;
                     // Decode the value and write it to the text buffer
-                    switch (writeEntityValue(referenceValueBuffer, decodedTexcharBuffer)) {
+                    switch (writeEntityValue(referenceValueBuffer, decodedTexcharBuffer, entityMap)) {
                         case (#ok)();
                         case (#error(e)) return #error(e);
                     };
@@ -79,7 +164,11 @@ module {
         #ok(Text.fromIter(decodedTexcharBuffer.vals()));
     };
 
-    private func writeEntityValue(escapedValue : Buffer.Buffer<Char>, decodedTexcharBuffer : Buffer.Buffer<Char>) : Result<()> {
+    private func writeEntityValue(
+        escapedValue : Buffer.Buffer<Char>,
+        decodedTexcharBuffer : Buffer.Buffer<Char>,
+        entityMap : TrieMap.TrieMap<Text, Text>,
+    ) : Result<()> {
         // If starts with a #, its a unicode character
         switch (escapedValue.get(0)) {
             case ('#') {
@@ -109,25 +198,20 @@ module {
                     };
                 };
             };
-            case ('%') {
-                Prelude.nyi(); // TODO parameters?
-            };
             case (_) {
-                let c = switch (Text.fromIter(escapedValue.vals())) {
-                    case ("lt") '<';
-                    case ("gt") '>';
-                    case ("apos") '\'';
-                    case ("quot") '\"';
-                    case ("amp") '&';
-                    case (entityId) {
-                        // TODO custom entities. This just returns the original value
+                switch (entityMap.get(Text.fromIter(escapedValue.vals()))) {
+                    case (null) {
+                        // Could not find the entity. This just returns the original value
                         decodedTexcharBuffer.add('&');
                         decodedTexcharBuffer.append(escapedValue);
                         decodedTexcharBuffer.add(';');
-                        return #ok;
+                    };
+                    case (?replacement) {
+                        for (c in replacement.chars()) {
+                            decodedTexcharBuffer.add(c);
+                        };
                     };
                 };
-                decodedTexcharBuffer.add(c);
                 #ok;
             };
         };
