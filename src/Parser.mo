@@ -1,16 +1,17 @@
 import Tokenizer "Tokenizer";
-import Types "Types";
 import Iter "mo:base/Iter";
 import Buffer "mo:base/Buffer";
 import Text "mo:base/Text";
 import Debug "mo:base/Debug";
+import Token "Token";
+import Document "Document";
 
 module {
 
     public type ParseError = {
         #unexpectedEndOfTokens;
         #tokensAfterRoot;
-        #unexpectedToken : Types.Token;
+        #unexpectedToken : Token.Token;
     };
 
     public type ParseResult<T> = {
@@ -18,12 +19,12 @@ module {
         #error : ParseError;
     };
 
-    public func parseDocument(tokens : Iter.Iter<Types.Token>) : ParseResult<Types.Document> {
-        var version : ?Types.Version = null;
+    public func parseDocument(tokens : Iter.Iter<Token.Token>) : ParseResult<Document.Document> {
+        var version : ?Document.Version = null;
         var encoding : ?Text = null;
         var standalone : ?Bool = null;
-        var docType : ?Types.DocType = null;
-        let processingInstructions = Buffer.Buffer<Types.ProcessingInstruction>(1);
+        var docType : ?Document.DocType = null;
+        let processingInstructions = Buffer.Buffer<Document.ProcessingInstruction>(1);
         loop {
             switch (tokens.next()) {
                 case (null) return #error(#unexpectedEndOfTokens);
@@ -72,8 +73,8 @@ module {
         };
     };
 
-    private func getNonCommentTokens(tokens : Iter.Iter<Types.Token>) : ?[Types.Token] {
-        var buffer : ?Buffer.Buffer<Types.Token> = null;
+    private func getNonCommentTokens(tokens : Iter.Iter<Token.Token>) : ?[Token.Token] {
+        var buffer : ?Buffer.Buffer<Token.Token> = null;
         loop {
             switch (tokens.next()) {
                 case (?#comment(c)) {
@@ -90,7 +91,7 @@ module {
                     let b = switch (buffer) {
                         // Create buffer if none exists
                         case (null) {
-                            let b = Buffer.Buffer<Types.Token>(1);
+                            let b = Buffer.Buffer<Token.Token>(1);
                             buffer := ?b;
                             b;
                         };
@@ -104,10 +105,10 @@ module {
     };
 
     private func parseElement(
-        tokens : Iter.Iter<Types.Token>,
-        startTag : Types.StartTagInfo,
+        tokens : Iter.Iter<Token.Token>,
+        startTag : Token.StartTagInfo,
         selfClosing : Bool,
-    ) : ParseResult<Types.Element> {
+    ) : ParseResult<Document.Element> {
         if (selfClosing) {
             return #ok({
                 name = startTag.name;
@@ -115,7 +116,7 @@ module {
                 children = #selfClosing;
             });
         };
-        let children = Buffer.Buffer<Types.ElementChild>(1);
+        let children = Buffer.Buffer<Document.ElementChild>(1);
         label l loop {
             switch (tokens.next()) {
                 case (null) {};

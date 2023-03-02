@@ -1,14 +1,15 @@
-import Types "../src/Types";
 import Tokenizer "../src/Tokenizer";
 import Parser "../src/Parser";
+import Token "../src/Token";
+import Document "../src/Document";
 
 module {
 
     public type Example = {
         name : Text;
         raw : Text;
-        tokens : [Types.Token];
-        doc : Types.Document;
+        tokens : [Token.Token];
+        doc : Document.Document;
     };
     public let examples : [Example] = [
         {
@@ -44,7 +45,7 @@ module {
                     name = "root";
                     selfClosing = false;
                 }),
-                #text("<>&'\"{🤣"),
+                #text("&lt;&gt;&amp;&apos;&quot;&#123;&#x1F923;"),
                 #endTag({ name = "root" }),
             ];
             doc = {
@@ -52,7 +53,7 @@ module {
                 processInstructions = [];
                 root = {
                     attributes = [];
-                    children = #open([#text("<>&'\"{🤣")]);
+                    children = #open([#text("&lt;&gt;&amp;&apos;&quot;&#123;&#x1F923;")]);
                     name = "root";
                 };
                 standalone = null;
@@ -812,7 +813,7 @@ module {
         {
             name = "RSS Feed";
             raw : Text = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><feed xmlns=\"http://www.w3.org/2005/Atom\" xml:lang=\"en\"><title>The Verge - All Posts</title><icon>https://cdn.vox-cdn.com/community_logos/52801/VER_Logomark_32x32..png</icon><updated>2022-11-21T21:30:42-05:00</updated><id>https://www.theverge.com/rss/full.xml</id><link type=\"text/html\" href=\"https://www.theverge.com/\" rel=\"alternate\"/><entry><published>2022-11-21T21:30:42-05:00</published><updated>2022-11-21T21:30:42-05:00</updated><title>Twitter is making DMs encrypted and adding video, voice chat, per Elon Musk</title><content type=\"html\"><figure><img alt=\"An illustration of the Twitter logo\" src=\"https://cdn.vox-cdn.com/thumbor/6kBqimyOvt-iCvNDVhv2okF4ey4=/0x0:3000x2000/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659917/acastro_STK050_04.0.jpg\" /><figcaption>Illustration by Alex Castro / The Verge</figcaption></figure><p id=\"TvAhZo\">Twitter’s new owner, Elon Musk, has been public about his desire to improve how the social network’s direct messages work. In a meeting with employees today, he spelled out exactly what that looks like.</p><p id=\"6MmlUD\">Framed by presentation slides titled “Twitter 2.0” at Twitter’s San Fransisco headquarters on Monday, Musk told employees that the company would encrypt DMs and work to add encrypted video and voice calling between accounts, according to a recording of the meeting obtained by<em>The Verge</em>.</p><p id=\"Z8NlgY\">“We want to enable users to be able to communicate without being concerned about their privacy, [or] without being concerned about a data breach at Twitter causing all of their DMs to hit the web, or think that maybe someone at Twitter could be spying on...</p><p><a href=\"https://www.theverge.com/2022/11/21/23472174/twitter-dms-encrypted-elon-musk-voice-video-calling\">Continue reading&hellip;</a></p></content><link rel=\"alternate\" type=\"text/html\" href=\"https://www.theverge.com/2022/11/21/23472174/twitter-dms-encrypted-elon-musk-voice-video-calling\"/><id>https://www.theverge.com/2022/11/21/23472174/twitter-dms-encrypted-elon-musk-voice-video-calling</id><author><name>Alex Heath</name></author></entry><entry><published>2022-11-21T20:24:25-05:00</published><updated>2022-11-21T20:24:25-05:00</updated><title>Domino’s is building an all-electric pizza delivery fleet with Chevy Bolts</title><content type=\"html\"><figure><img alt=\"Two chevy bolt ev cars, wrapped in domino’s artwork are parked in front of a domino’s pizza store with one of the cars hooked up to a charger.\" src=\"https://cdn.vox-cdn.com/thumbor/uraUyO3VeLJ8RJ6ethB54sPF1bs=/0x1:2048x1366/1310x873/cdn.vox-cdn.com/uploads/chorus_image/image/71659802/Dominos_Chevy_Bolt_EVs_08.0.jpg\" /><figcaption><em>Domino’s outfitted Chevy Bolts.</em> | Image: Domino’s</figcaption></figure><p id=\"1PMpbG\">Domino’s is gearing up to put<a href=\"https://ir.dominos.com/news-releases/news-release-details/dominosr-roll-out-nationwide-fleet-800-chevy-boltr-electric\">more than 800 all-electric pizza delivery vehicles into service</a> in the coming months, starting with over 100 of them rolling out in November. The company went with the compact Chevy Bolt EV and is wrapping the vehicles with custom branding but no other bells and whistles — just combustion-free deliveries (via<a href=\"https://electrek.co/2022/11/21/dominos-acquires-800-chevy-bolts-evs-for-delivery-fleet/\"><em>electrek</em></a>).</p><p id=\"Lo1Jmp\">Domino will have a fleet of 855 new electric vehicles, to be exact, and while that’s not quite enough to reach<a href=\"https://ir.dominos.com/static-files/4daec873-268e-4456-b541-3871f28288e2\">all 6,135 of the pizza shops in the US</a>, it's more than the Chevy Spark-based (gas version) ones it built with<a href=\"https://www.theverge.com/2015/10/21/9587270/dominos-dxp-delivery-car-chevy-spark-pizza\">custom pizza warming oven doors</a> in 2015. Those were called the Domino’s DXP, and only 155 of them were made. For the new Bolts, drivers will need to toss the HeatWave bags in...</p><p><a href=\"https://www.theverge.com/2022/11/21/23472002/dominos-chevy-bolt-ev-pizza-delivery-fleet-rollout\">Continue reading&hellip;</a></p></content><link rel=\"alternate\" type=\"text/html\" href=\"https://www.theverge.com/2022/11/21/23472002/dominos-chevy-bolt-ev-pizza-delivery-fleet-rollout\"/><id>https://www.theverge.com/2022/11/21/23472002/dominos-chevy-bolt-ev-pizza-delivery-fleet-rollout</id><author><name>Umar Shakir</name></author></entry></feed>";
-            tokens : [Types.Token] = [
+            tokens : [Token.Token] = [
                 #xmlDeclaration({
                     encoding = ?"UTF-8";
                     version = { major = 1; minor = 0 };
@@ -1149,7 +1150,7 @@ module {
                 #endTag({ name = "feed" }),
             ];
 
-            doc : Types.Document = {
+            doc : Document.Document = {
                 docType = null;
                 encoding = ?"UTF-8";
                 processInstructions = [];
@@ -1570,17 +1571,12 @@ module {
             error = "Unexpected character '>'";
             rawXml = "<root>></root>";
         },
-        {
-            name = "Unescaped & character";
-            error = "Unexpected character '&'";
-            rawXml = "<root>&</root>";
-        },
     ];
 
     public type ParsingFailExample = {
         name : Text;
         error : Parser.ParseError;
-        tokens : [Types.Token];
+        tokens : [Token.Token];
     };
 
     public let parsingFailureExamples : [ParsingFailExample] = [

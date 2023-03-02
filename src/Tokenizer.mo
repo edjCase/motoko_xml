@@ -3,16 +3,17 @@ import Text "mo:base/Text";
 import Iter "mo:base/Iter";
 import Debug "mo:base/Debug";
 import Char "mo:base/Char";
-import Types "Types";
 import Nat "mo:base/Nat";
 import NatX "mo:xtended-numbers/NatX";
 import Prelude "mo:base/Prelude";
 import Array "mo:base/Array";
 import Nat32 "mo:base/Nat32";
-import TextX "TextX";
+import TextX "mo:xtended-text/TextX";
 import IterX "IterX";
 import TextSlice "TextSlice";
 import Slice "Slice";
+import Token "Token";
+import Document "Document";
 
 module {
 
@@ -20,7 +21,7 @@ module {
 
     type Result<T> = { #ok : T; #error : Text };
 
-    public type TokenizeResult = Result<[Types.Token]>;
+    public type TokenizeResult = Result<[Token.Token]>;
 
     public func tokenizeText(value : Text) : TokenizeResult {
         let reader = IterX.IterReader<Char>(Text.toIter(value));
@@ -38,7 +39,7 @@ module {
     };
 
     public func tokenize(reader : IterX.IterReader<Char>) : TokenizeResult {
-        let tokenBuffer = Buffer.Buffer<Types.Token>(2);
+        let tokenBuffer = Buffer.Buffer<Token.Token>(2);
         loop {
             switch (getNext(reader)) {
                 case (#ok(t)) {
@@ -50,7 +51,7 @@ module {
         };
     };
 
-    private func getNext(reader : IterX.IterReader<Char>) : Result<Types.Token> or {
+    private func getNext(reader : IterX.IterReader<Char>) : Result<Token.Token> or {
         #end;
     } {
         skipWhitespace(reader);
@@ -67,11 +68,7 @@ module {
                     // or return the text value that has built up
                     if (c == '<') {
                         let token = if (charBuffer.size() > 0) {
-                            let textValue = switch (decodeTextValue(charBuffer)) {
-                                case (#error(e)) return #error(e);
-                                case (#ok(v)) v;
-                            };
-                            #text(textValue);
+                            #text(Text.fromIter(charBuffer.vals()));
                         } else {
                             switch (parseTagToken(reader)) {
                                 case (#error(e)) return #error(e);
@@ -95,97 +92,7 @@ module {
         };
     };
 
-    private func decodeTextValue(buffer : Buffer.Buffer<Char>) : Result<Text> {
-        let decodedTexcharBuffer = Buffer.Buffer<Char>(buffer.size());
-        let referenceValueBuffer = Buffer.Buffer<Char>(4);
-        var inAmp = false;
-        for (c in buffer.vals()) {
-            // If characters are between & and ; then they are a reference
-            // to a value. This does the translation if it can
-            if (inAmp) {
-                if (c == ';') {
-                    inAmp := false;
-                    // Decode the value and write it to the text buffer
-                    switch (writeEntityValue(referenceValueBuffer, decodedTexcharBuffer)) {
-                        case (#ok)();
-                        case (#error(e)) return #error(e);
-                    };
-                    // Clear character buffer and continue iterating
-                    referenceValueBuffer.clear();
-                } else {
-                    // Add to the character buffer if between & and ;
-                    referenceValueBuffer.add(c);
-                };
-            } else {
-                if (c == '&') {
-                    inAmp := true;
-                } else {
-                    // Add regular character
-                    decodedTexcharBuffer.add(c);
-                };
-            };
-        };
-        if (inAmp) {
-            return #error("Unexpected character '&'");
-        };
-        #ok(Text.fromIter(decodedTexcharBuffer.vals()));
-    };
-
-    private func writeEntityValue(escapedValue : Buffer.Buffer<Char>, decodedTexcharBuffer : Buffer.Buffer<Char>) : Result<()> {
-        // If starts with a #, its a unicode character
-        switch (escapedValue.get(0)) {
-            case ('#') {
-                // # means its a unicode value
-                let unicodeScalar : ?Nat = if (escapedValue.get(1) == 'x') {
-                    // If prefixed with x, it is a hex value
-                    let hexBuffer = Buffer.subBuffer<Char>(escapedValue, 2, escapedValue.size() - 2);
-                    let hex = Text.fromIter(hexBuffer.vals());
-                    NatX.fromTextAdvanced(hex, #hexadecimal, null); // Parse hexadecimal
-                } else {
-                    // Otherwise its a decimal value
-                    let decimalBuffer = Buffer.subBuffer<Char>(escapedValue, 1, escapedValue.size() - 1);
-                    let decimal = Text.fromIter(decimalBuffer.vals());
-                    NatX.fromText(decimal); // Parse decimal
-                };
-                switch (unicodeScalar) {
-                    case (null) return #error("Invalid unicode value '" # Text.fromIter(escapedValue.vals()) # "'");
-                    case (?s) {
-                        // Must fit in a nat32
-                        if (s > 4294967295) {
-                            return #error("Invalid unicode value '" # Text.fromIter(escapedValue.vals()) # "'");
-                        };
-                        // Convert unicode id to a unicode character
-                        let unicodeCharacter = Char.fromNat32(Nat32.fromNat(s));
-                        decodedTexcharBuffer.add(unicodeCharacter);
-                        #ok;
-                    };
-                };
-            };
-            case ('%') {
-                Prelude.nyi(); // TODO parameters?
-            };
-            case (_) {
-                let c = switch (Text.fromIter(escapedValue.vals())) {
-                    case ("lt") '<';
-                    case ("gt") '>';
-                    case ("apos") '\'';
-                    case ("quot") '\"';
-                    case ("amp") '&';
-                    case (entityId) {
-                        // TODO custom entities. This just returns the original value
-                        decodedTexcharBuffer.add('&');
-                        decodedTexcharBuffer.append(escapedValue);
-                        decodedTexcharBuffer.add(';');
-                        return #ok;
-                    };
-                };
-                decodedTexcharBuffer.add(c);
-                #ok;
-            };
-        };
-    };
-
-    private func getTagInfo(tag : TextSlice.TextSlice) : Result<Types.TagInfo> {
+    private func getTagInfo(tag : TextSlice.TextSlice) : Result<Token.TagInfo> {
         let tagTokens : Iter.Iter<Result<TextSlice.TextSlice>> = TagTokenIterator(tag);
 
         let name : TextSlice.TextSlice = switch (tagTokens.next()) {
@@ -196,7 +103,7 @@ module {
             };
         };
 
-        let attributes = Buffer.Buffer<Types.Attribute>(0);
+        let attributes = Buffer.Buffer<Document.Attribute>(0);
 
         label l loop {
             let attribute = switch (tagTokens.next()) {
@@ -243,7 +150,7 @@ module {
         };
     };
 
-    private func parseTagToken(reader : IterX.IterReader<Char>) : Result<Types.Token> {
+    private func parseTagToken(reader : IterX.IterReader<Char>) : Result<Token.Token> {
         matchAndParseSlice(
             reader,
             [
@@ -305,14 +212,14 @@ module {
         );
     };
 
-    private func parseDocType(slice : TextSlice.TextSlice) : Result<Types.Token> {
+    private func parseDocType(slice : TextSlice.TextSlice) : Result<Token.Token> {
         let iter = TagTokenIterator(slice);
         let rootElementName : Text = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
             case (?#error(e)) return #error(e);
             case (?#ok(t)) t.toText();
         };
-        let (externalTypes : ?Types.ExternalTypesDefinition, internalTypes : [Types.InternalDocumentTypeDefinition]) = switch (iter.next()) {
+        let (externalTypes : ?Document.ExternalTypesDefinition, internalTypes : [Document.InternalDocumentTypeDefinition]) = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
             case (?#error(e)) return #error(e);
             case (?#ok(t)) {
@@ -328,11 +235,11 @@ module {
                             case (?#error(e)) return #error(e);
                             case (?#ok(t)) t.toText();
                         };
-                        let externalTypes : ?Types.ExternalTypesDefinition = ?#public_({
+                        let externalTypes : ?Document.ExternalTypesDefinition = ?#public_({
                             id = publicId;
                             url = url;
                         });
-                        let internalTypes : [Types.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
+                        let internalTypes : [Document.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
                             case (#error(e)) return #error(e);
                             case (#ok(t)) t;
                         };
@@ -344,18 +251,18 @@ module {
                             case (?#error(e)) return #error(e);
                             case (?#ok(t)) t;
                         };
-                        let externalTypes : ?Types.ExternalTypesDefinition = ?#system_({
+                        let externalTypes : ?Document.ExternalTypesDefinition = ?#system_({
                             url = url.toText();
                         });
-                        let internalTypes : [Types.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
+                        let internalTypes : [Document.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
                             case (#error(e)) return #error(e);
                             case (#ok(t)) t;
                         };
                         (externalTypes, internalTypes);
                     };
                     case ("[") {
-                        let externalTypes : ?Types.ExternalTypesDefinition = null;
-                        let internalTypes : [Types.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
+                        let externalTypes : ?Document.ExternalTypesDefinition = null;
+                        let internalTypes : [Document.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
                             case (#error(e)) return #error(e);
                             case (#ok(t)) t;
                         };
@@ -376,14 +283,14 @@ module {
         );
     };
 
-    private func parseInternalTypes(reader : IterX.IterReader<Char>) : Result<[Types.InternalDocumentTypeDefinition]> {
-        let internalTypes = Buffer.Buffer<Types.InternalDocumentTypeDefinition>(2);
+    private func parseInternalTypes(reader : IterX.IterReader<Char>) : Result<[Document.InternalDocumentTypeDefinition]> {
+        let internalTypes = Buffer.Buffer<Document.InternalDocumentTypeDefinition>(2);
         label l loop {
             skipWhitespace(reader);
             if (reader.peek() == ?']' or reader.peek() == null) {
                 break l;
             };
-            let r = matchAndParseSlice<Types.InternalDocumentTypeDefinition>(
+            let r = matchAndParseSlice<Document.InternalDocumentTypeDefinition>(
                 reader,
                 [
                     {
@@ -423,7 +330,7 @@ module {
         #ok(Buffer.toArray(internalTypes));
     };
 
-    private func parseEntity(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
+    private func parseEntity(slice : TextSlice.TextSlice) : Result<Document.InternalDocumentTypeDefinition> {
         let iter = TagTokenIterator(slice);
         let nameOrPercent = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
@@ -431,7 +338,7 @@ module {
             case (?#ok(t)) t;
         };
 
-        let token : Types.InternalDocumentTypeDefinition = if (nameOrPercent.size() == 1 and nameOrPercent.get(0) == '%') {
+        let token : Document.InternalDocumentTypeDefinition = if (nameOrPercent.size() == 1 and nameOrPercent.get(0) == '%') {
             let name = switch (iter.next()) {
                 case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                 case (?#error(e)) return #error(e);
@@ -559,14 +466,14 @@ module {
         };
     };
 
-    private func parseElement(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
+    private func parseElement(slice : TextSlice.TextSlice) : Result<Document.InternalDocumentTypeDefinition> {
         let iter = TagTokenIterator(slice);
         let name = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
             case (?#error(e)) return #error(e);
             case (?#ok(t)) t.toText();
         };
-        let allowableContents : Types.AllowableContents = switch (iter.next()) {
+        let allowableContents : Document.AllowableContents = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
             case (?#error(e)) return #error(e);
             case (?#ok(childSlice)) {
@@ -599,7 +506,7 @@ module {
         #ok(#element({ name = name; allowableContents = allowableContents }));
     };
 
-    private func parseChildElement(childSlice : TextSlice.TextSlice) : Result<Types.ChildElement> {
+    private func parseChildElement(childSlice : TextSlice.TextSlice) : Result<Document.ChildElement> {
         // Get the ocurrance suffix and return the slice without it
         let (ocurrance, sliceWithoutOcurrance) = parseOcurrance(childSlice);
         // If not wrapped in parens, it's a single element
@@ -628,7 +535,7 @@ module {
         });
     };
 
-    private func parseOcurrance(slice : TextSlice.TextSlice) : (Types.Ocurrance, TextSlice.TextSlice) {
+    private func parseOcurrance(slice : TextSlice.TextSlice) : (Document.Ocurrance, TextSlice.TextSlice) {
         let lastIndex : Nat = slice.size() - 1;
         let ocurrance = switch (slice.get(lastIndex)) {
             case ('?') #zeroOrOne;
@@ -644,8 +551,8 @@ module {
         return (ocurrance, trimmedSlice);
     };
 
-    private func parseChoiceOrSequence(slice : TextSlice.TextSlice) : Result<Types.ElementChoiceOrSequence> {
-        let children = Buffer.Buffer<Types.ChildElement>(5);
+    private func parseChoiceOrSequence(slice : TextSlice.TextSlice) : Result<Document.ElementChoiceOrSequence> {
+        let children = Buffer.Buffer<Document.ChildElement>(5);
         let childCharacters = Buffer.Buffer<Char>(5);
         var depth = 0;
         var isChoice : ?Bool = null;
@@ -689,7 +596,7 @@ module {
         };
     };
 
-    private func parseAttribute(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
+    private func parseAttribute(slice : TextSlice.TextSlice) : Result<Document.InternalDocumentTypeDefinition> {
 
         let iter = TagTokenIterator(slice);
         let elementName = switch (iter.next()) {
@@ -704,7 +611,7 @@ module {
             case (?#ok(t)) t.toText();
         };
 
-        let type_ : Types.AttributeType = switch (iter.next()) {
+        let type_ : Document.AttributeType = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
             case (?#error(e)) return #error(e);
             case (?#ok(t)) {
@@ -763,7 +670,7 @@ module {
         );
     };
 
-    private func parseNotation(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
+    private func parseNotation(slice : TextSlice.TextSlice) : Result<Document.InternalDocumentTypeDefinition> {
         let iter = TagTokenIterator(slice);
         let name = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
@@ -809,7 +716,7 @@ module {
         );
     };
 
-    private func parseEndTag(slice : TextSlice.TextSlice) : Result<Types.Token> {
+    private func parseEndTag(slice : TextSlice.TextSlice) : Result<Token.Token> {
         // TODO validate only name and no attributes
         #ok(#endTag({ name = slice.trimWhitespace().toText() }));
     };
@@ -818,17 +725,17 @@ module {
         #ok(#comment(slice.toText()));
     };
 
-    private func parseCDATA(slice : TextSlice.TextSlice) : Result<Types.Token> {
+    private func parseCDATA(slice : TextSlice.TextSlice) : Result<Token.Token> {
         #ok(#text(slice.toText()));
     };
 
-    private func parseStartTag(slice : TextSlice.TextSlice) : Result<Types.Token> {
+    private func parseStartTag(slice : TextSlice.TextSlice) : Result<Token.Token> {
         let (trimmedSlice : TextSlice.TextSlice, isSelfClosing : Bool) = switch (slice.get(slice.size() - 1)) {
             case ('/')(slice.slice(0, ?(slice.size() - 1)), true); // Started with a slash, so it's self closing, trim
             case (s)(slice, false); // No slash, so it's not self closing, no trim
         };
 
-        let tagInfo : Types.TagInfo = switch (getTagInfo(trimmedSlice)) {
+        let tagInfo : Token.TagInfo = switch (getTagInfo(trimmedSlice)) {
             case (#error(e)) return #error(e);
             case (#ok(t)) t;
         };
@@ -836,8 +743,8 @@ module {
         #ok(#startTag({ tagInfo with selfClosing = isSelfClosing }));
     };
 
-    private func parseQ(slice : TextSlice.TextSlice) : Result<Types.Token> {
-        let tagInfo : Types.TagInfo = switch (getTagInfo(slice)) {
+    private func parseQ(slice : TextSlice.TextSlice) : Result<Token.Token> {
+        let tagInfo : Token.TagInfo = switch (getTagInfo(slice)) {
             case (#error(e)) return #error(e);
             case (#ok(t)) t;
         };

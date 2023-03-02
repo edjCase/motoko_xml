@@ -1,4 +1,5 @@
 module {
+
     public type Document = {
         version : ?Version;
         encoding : ?Text;
@@ -17,6 +18,7 @@ module {
         #element : Element;
         #text : Text;
         #comment : Text;
+        #cdata : Text;
     };
 
     public type Element = {
@@ -33,20 +35,8 @@ module {
         value : ?Text;
     };
 
-    public type TagInfo = {
-        name : Text;
-        attributes : [Attribute];
-    };
-
-    public type StartTagInfo = TagInfo and { selfClosing : Bool };
 
     public type Version = { major : Nat; minor : Nat };
-
-    public type XmlDeclaration = {
-        version : Version;
-        encoding : ?Text;
-        standalone : ?Bool;
-    };
 
     public type ElementChoiceOrSequence = {
         #sequence : [ChildElement];
@@ -150,15 +140,5 @@ module {
     public type DocType = {
         rootElementName : Text;
         typeDefinition : DocumentTypeDefinition;
-    };
-
-    public type Token = {
-        #startTag : StartTagInfo;
-        #endTag : { name : Text };
-        #text : Text;
-        #comment : Text;
-        #xmlDeclaration : XmlDeclaration;
-        #processingInstruction : ProcessingInstruction;
-        #docType : DocType;
     };
 };
