@@ -17,6 +17,9 @@ jobs:
         with:
           node-version: "16"
 
+      - name: Install DFX
+        run: sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+
       - name: Install MOPS
         run: npm i -g ic-mops
 
