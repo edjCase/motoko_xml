@@ -169,7 +169,7 @@ module {
                     case ("lt") '<';
                     case ("gt") '>';
                     case ("apos") '\'';
-                    case ("quot") '\u{22}';
+                    case ("quot") '\"';
                     case ("amp") '&';
                     case (entityId) {
                         // TODO custom entities. This just returns the original value
@@ -249,43 +249,56 @@ module {
             [
                 {
                     startsWith = TextSlice.fromText("</");
-                    endsWith = TextSlice.fromText(">");
+                    endsWith = #text(TextSlice.fromText(">"));
                     parse = parseEndTag;
                 },
                 {
                     startsWith = TextSlice.fromText("<!--");
-                    endsWith = TextSlice.fromText("-->");
+                    endsWith = #text(TextSlice.fromText("-->"));
                     parse = parseComment;
                 },
                 {
                     startsWith = TextSlice.fromText("<?");
-                    endsWith = TextSlice.fromText("?>");
+                    endsWith = #text(TextSlice.fromText("?>"));
                     parse = parseQ;
                 },
                 {
                     startsWith = TextSlice.fromText("<![CDATA[");
-                    endsWith = TextSlice.fromText("]]>");
+                    endsWith = #text(TextSlice.fromText("]]>"));
                     parse = parseCDATA;
                 },
-                // TODO make DOCTYPE more robust and one case
                 {
                     startsWith = TextSlice.fromText("<!DOCTYPE");
-                    endsWith = TextSlice.fromText("]>");
-                    parse = parseDocType;
-                },
-                {
-                    startsWith = TextSlice.fromText("<!DOCTYPE");
-                    endsWith = TextSlice.fromText("] >");
-                    parse = parseDocType;
-                },
-                {
-                    startsWith = TextSlice.fromText("<!DOCTYPE");
-                    endsWith = TextSlice.fromText(">");
+                    endsWith = #custom(
+                        func(iter : Iter.Iter<Char>) : ?(TextSlice.TextSlice, Nat) {
+                            do ? {
+                                var depth = 0;
+                                let buffer = Buffer.Buffer<Char>(20);
+                                label l loop {
+                                    let c = iter.next()!;
+                                    // Loop until we find the end of the doctype
+                                    // but there are nested tags
+                                    if (c == '>') {
+                                        if (depth == 1) {
+                                            break l;
+                                        } else {
+                                            depth := depth - 1;
+                                        };
+                                    } else if (c == '<') {
+                                        depth := depth + 1;
+                                    };
+                                    buffer.add(c);
+                                };
+
+                                (TextSlice.slice(#buffer(buffer), 0, null), 1);
+                            };
+                        },
+                    );
                     parse = parseDocType;
                 },
                 {
                     startsWith = TextSlice.fromText("<");
-                    endsWith = TextSlice.fromText(">");
+                    endsWith = #text(TextSlice.fromText(">"));
                     parse = parseStartTag;
                 },
             ],
@@ -367,7 +380,7 @@ module {
         let internalTypes = Buffer.Buffer<Types.InternalDocumentTypeDefinition>(2);
         label l loop {
             skipWhitespace(reader);
-            if (reader.peek() == null) {
+            if (reader.peek() == ?']' or reader.peek() == null) {
                 break l;
             };
             let r = matchAndParseSlice<Types.InternalDocumentTypeDefinition>(
@@ -375,23 +388,28 @@ module {
                 [
                     {
                         startsWith = TextSlice.fromText("<!ENTITY");
-                        endsWith = TextSlice.fromText(">");
+                        endsWith = #text(TextSlice.fromText(">"));
                         parse = parseEntity;
                     },
                     {
                         startsWith = TextSlice.fromText("<!ELEMENT");
-                        endsWith = TextSlice.fromText(">");
+                        endsWith = #text(TextSlice.fromText(">"));
                         parse = parseElement;
                     },
                     {
                         startsWith = TextSlice.fromText("<!ATTLIST");
-                        endsWith = TextSlice.fromText(">");
+                        endsWith = #text(TextSlice.fromText(">"));
                         parse = parseAttribute;
                     },
                     {
                         startsWith = TextSlice.fromText("<!NOTATION");
-                        endsWith = TextSlice.fromText(">");
+                        endsWith = #text(TextSlice.fromText(">"));
                         parse = parseNotation;
+                    },
+                    {
+                        startsWith = TextSlice.fromText("<!--");
+                        endsWith = #text(TextSlice.fromText("-->"));
+                        parse = parseComment;
                     },
                 ],
             );
@@ -429,7 +447,7 @@ module {
                     let url = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                         case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.toText();
+                        case (?#ok(t)) t.trimSingle('\"').toText();
                     };
                     #external({
                         type_ = #system_;
@@ -440,12 +458,12 @@ module {
                     let publicId = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                         case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.toText();
+                        case (?#ok(t)) t.trimSingle('\"').toText();
                     };
                     let url = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                         case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.toText();
+                        case (?#ok(t)) t.trimSingle('\"').toText();
                     };
                     #external({
                         type_ = #public_({ id = publicId });
@@ -453,9 +471,7 @@ module {
                     });
                 };
                 case (entityValue) {
-                    #internal({
-                        value = entityValue;
-                    });
+                    #internal(Text.trim(entityValue, #char('\"')));
                 };
             };
 
@@ -475,7 +491,7 @@ module {
                     let url = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                         case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.toText();
+                        case (?#ok(t)) t.trimSingle('\"').toText();
                     };
                     let notationId : ?Text = switch (parseNotationId(iter)) {
                         case (#error(e)) return #error(e);
@@ -491,12 +507,12 @@ module {
                     let publicId = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                         case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.toText();
+                        case (?#ok(t)) t.trimSingle('\"').toText();
                     };
                     let url = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                         case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.toText();
+                        case (?#ok(t)) t.trimSingle('\"').toText();
                     };
                     let notationId : ?Text = switch (parseNotationId(iter)) {
                         case (#error(e)) return #error(e);
@@ -509,9 +525,7 @@ module {
                     });
                 };
                 case (entityValue) {
-                    #internal({
-                        value = entityValue;
-                    });
+                    #internal(Text.trim(entityValue, #char('\"')));
                 };
             };
             #generalEntity({
@@ -676,6 +690,7 @@ module {
     };
 
     private func parseAttribute(slice : TextSlice.TextSlice) : Result<Types.InternalDocumentTypeDefinition> {
+
         let iter = TagTokenIterator(slice);
         let elementName = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
@@ -694,7 +709,7 @@ module {
             case (?#error(e)) return #error(e);
             case (?#ok(t)) {
                 if (t.get(0) == '(' and t.get(t.size() - 1) == ')') {
-                    let enumValues = t.slice(1, ?(t.size() - 1)).split('|');
+                    let enumValues = t.slice(1, ?(t.size() - 2)).split('|');
                     #enumeration(Iter.toArray(Iter.map<TextSlice.TextSlice, Text>(enumValues, func(t) = t.toText())));
                 } else {
                     switch (t.toText()) {
@@ -710,7 +725,7 @@ module {
                             let notations = switch (iter.next()) {
                                 case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                                 case (?#error(e)) return #error(e);
-                                case (?#ok(t)) t.slice(1, ?(t.size() - 1)).split('|');
+                                case (?#ok(t)) t.slice(1, ?(t.size() - 2)).split('|');
                             };
                             #notation(Iter.toArray(Iter.map<TextSlice.TextSlice, Text>(notations, func(t) = t.toText())));
                         };
@@ -730,7 +745,7 @@ module {
                     let fixedValue = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                         case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.toText();
+                        case (?#ok(t)) t.trimSingle('\"').toText();
                     };
                     #fixed(fixedValue);
                 };
@@ -764,12 +779,12 @@ module {
                         let id = switch (iter.next()) {
                             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                             case (?#error(e)) return #error(e);
-                            case (?#ok(t)) t.toText();
+                            case (?#ok(t)) t.trimSingle('\"').toText();
                         };
                         let url = switch (iter.next()) {
                             case (null) null;
                             case (?#error(e)) return #error(e);
-                            case (?#ok(t)) ?t.toText();
+                            case (?#ok(t)) ?t.trimSingle('\"').toText();
                         };
                         #public_({ id = id; url = url });
                     };
@@ -777,7 +792,7 @@ module {
                         let url = switch (iter.next()) {
                             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                             case (?#error(e)) return #error(e);
-                            case (?#ok(t)) t.toText();
+                            case (?#ok(t)) t.trimSingle('\"').toText();
                         };
                         #system_({ url = url });
                     };
@@ -799,7 +814,7 @@ module {
         #ok(#endTag({ name = slice.trimWhitespace().toText() }));
     };
 
-    private func parseComment(slice : TextSlice.TextSlice) : Result<Types.Token> {
+    private func parseComment(slice : TextSlice.TextSlice) : Result<{ #comment : Text }> {
         #ok(#comment(slice.toText()));
     };
 
@@ -900,7 +915,10 @@ module {
 
     public type SliceMatchInfo<T> = {
         startsWith : TextSlice.TextSlice;
-        endsWith : TextSlice.TextSlice;
+        endsWith : {
+            #text : TextSlice.TextSlice;
+            #custom : Iter.Iter<Char> -> ?(slice : TextSlice.TextSlice, suffixLength : Nat);
+        };
         parse : SliceParser<T>;
     };
 
@@ -941,16 +959,31 @@ module {
                 case (?true) {
                     // Match found, parse the rest
                     reIter.reset(); // Reset the iterator
-                    switch (readUntilSuffix(c.endsWith, reIter)) {
-                        case (null) {
-                            // Unexpected end, should have matched
-                            return #error(UNEXPECTED_ERROR_MESSAGE);
+                    let (slice : TextSlice.TextSlice, suffixLength : Nat) = switch (c.endsWith) {
+                        case (#text(suffix)) {
+                            // Read until suffix
+                            let slice = switch (readUntilSuffix(suffix, reIter)) {
+                                case (null) {
+                                    // No match found
+                                    return #error(UNEXPECTED_ERROR_MESSAGE);
+                                };
+                                case (?s)(s, suffix.size());
+                            };
                         };
-                        case (?slice) {
-                            // Match found, trim matches
-                            return c.parse(slice.slice(c.startsWith.size(), ?(slice.size() - c.endsWith.size() - c.startsWith.size())));
+                        case (#custom(customReader)) {
+                            // Read until customReader returns a match
+                            switch (customReader(reIter)) {
+                                case (null) {
+                                    // No match found
+                                    return #error(UNEXPECTED_ERROR_MESSAGE);
+                                };
+                                case (?s) s;
+                            };
                         };
                     };
+                    // Match found, trim matches
+                    let length : Nat = slice.size() - suffixLength - c.startsWith.size();
+                    return c.parse(slice.slice(c.startsWith.size(), ?length));
 
                 };
             };
@@ -1013,9 +1046,11 @@ module {
                     case (null) return buildSlice(false);
                     case (?c) {
                         nextIndex := nextIndex + 1;
-                        // '\u{22}' instead of '\"'. There is a parsing bug
-                        if (c == '\u{22}') {
+                        if (c == '\"') {
                             inQuotes := not inQuotes;
+                        } else if (c == '<' or c == '>') {
+                            // Only allowed as tag start/end
+                            return ?#error("Unexpected character '" # Text.fromChar(c) # "'");
                         } else {
                             if (not inQuotes) {
                                 if (Char.isWhitespace(c)) {

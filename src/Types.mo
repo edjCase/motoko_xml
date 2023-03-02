@@ -100,9 +100,7 @@ module {
     public type GeneralEntityTypeDefinition = {
         name : Text;
         type_ : {
-            #internal : {
-                value : Text;
-            };
+            #internal : Text;
             #external : {
                 type_ : { #system_; #public_ : { id : Text } };
                 url : Text;
@@ -114,9 +112,7 @@ module {
     public type ParameterEntityTypeDefinition = {
         name : Text;
         type_ : {
-            #internal : {
-                value : Text;
-            };
+            #internal : Text;
             #external : {
                 type_ : { #system_; #public_ : { id : Text } };
                 url : Text;

@@ -176,7 +176,7 @@ module {
             };
         },
         {
-            name = "DOCTYPE";
+            name = "DOCTYPE ELEMENT";
             raw = "<!DOCTYPE root [ <!ELEMENT foo (#PCDATA)> <!ELEMENT img EMPTY> <!ELEMENT img2 ANY> <!ELEMENT img3 (foo)> <!ELEMENT img4 (foo|img)> <!ELEMENT img5 (foo,img)> <!ELEMENT img6 (foo*)> <!ELEMENT img7 (foo+)> <!ELEMENT img8 (foo?)> <!ELEMENT img9 ((foo|img)*)>]><root></root>";
             tokens = [
                 #docType({
@@ -385,6 +385,420 @@ module {
                                 );
                                 name = "img9";
                             }),
+                        ];
+                    };
+                };
+                encoding = null;
+                processInstructions = [];
+                root = { attributes = []; children = #open([]); name = "root" };
+                standalone = null;
+                version = null;
+            };
+        },
+        {
+            name = "DOCTYPE ATTLIST";
+            raw = "<!DOCTYPE root [ <!ATTLIST a1 n1 CDATA #REQUIRED> <!ATTLIST a2 n2 IDREF #IMPLIED> <!ATTLIST a3 n3 NMTOKEN #FIXED \"f\">  <!ATTLIST a4 n4 ID #REQUIRED> <!ATTLIST a5 n5 IDREFS #REQUIRED>  <!ATTLIST a6 n6 ENTITY #REQUIRED>   <!ATTLIST a7 n7 ENTITIES #REQUIRED> <!ATTLIST a8 n8 NMTOKENS #REQUIRED> <!ATTLIST a9 n9 NOTATION (nota|tion) #REQUIRED> <!ATTLIST a10 n10 (one|two) #REQUIRED>  ] ><root></root>";
+            tokens = [
+                #docType({
+                    rootElementName = "root";
+                    typeDefinition = {
+                        externalTypes = null;
+                        internalTypes = [
+                            #attribute({
+                                elementName = "a1";
+                                name = "n1";
+                                type_ = #cdata;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a2";
+                                name = "n2";
+                                type_ = #idRef;
+                                defaultValue = #implied;
+                            }),
+                            #attribute({
+                                elementName = "a3";
+                                name = "n3";
+                                type_ = #nmToken;
+                                defaultValue = #fixed("f");
+                            }),
+                            #attribute({
+                                elementName = "a4";
+                                name = "n4";
+                                type_ = #id;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a5";
+                                name = "n5";
+                                type_ = #idRefs;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a6";
+                                name = "n6";
+                                type_ = #entity;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a7";
+                                name = "n7";
+                                type_ = #entities;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a8";
+                                name = "n8";
+                                type_ = #nmTokens;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a9";
+                                name = "n9";
+                                type_ = #notation(["nota", "tion"]);
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a10";
+                                name = "n10";
+                                type_ = #enumeration(["one", "two"]);
+                                defaultValue = #required;
+                            }),
+                        ];
+                    };
+                }),
+                #startTag({
+                    name = "root";
+                    attributes = [];
+                    selfClosing = false;
+                }),
+                #endTag({ name = "root" }),
+            ];
+            doc = {
+                docType = ?{
+                    rootElementName = "root";
+                    typeDefinition = {
+                        externalTypes = null;
+                        internalTypes = [
+                            #attribute({
+                                elementName = "a1";
+                                name = "n1";
+                                type_ = #cdata;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a2";
+                                name = "n2";
+                                type_ = #idRef;
+                                defaultValue = #implied;
+                            }),
+                            #attribute({
+                                elementName = "a3";
+                                name = "n3";
+                                type_ = #nmToken;
+                                defaultValue = #fixed("f");
+                            }),
+                            #attribute({
+                                elementName = "a4";
+                                name = "n4";
+                                type_ = #id;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a5";
+                                name = "n5";
+                                type_ = #idRefs;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a6";
+                                name = "n6";
+                                type_ = #entity;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a7";
+                                name = "n7";
+                                type_ = #entities;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a8";
+                                name = "n8";
+                                type_ = #nmTokens;
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a9";
+                                name = "n9";
+                                type_ = #notation(["nota", "tion"]);
+                                defaultValue = #required;
+                            }),
+                            #attribute({
+                                elementName = "a10";
+                                name = "n10";
+                                type_ = #enumeration(["one", "two"]);
+                                defaultValue = #required;
+                            }),
+                        ];
+                    };
+                };
+                encoding = null;
+                processInstructions = [];
+                root = { attributes = []; children = #open([]); name = "root" };
+                standalone = null;
+                version = null;
+            };
+        },
+        {
+            name = "DOCTYPE ENTITY";
+            raw = "<!DOCTYPE root [ <!ENTITY n1 \"v1\"> <!ENTITY n2 SYSTEM \"Uri1\"> <!ENTITY n3 PUBLIC \"Id1\" \"Uri2\"> <!ENTITY n4 SYSTEM \"Uri3\" NDATA nd1> <!ENTITY n5 PUBLIC \"Id2\" \"Uri4\" NDATA nd2> <!ENTITY % n6 \"v2\"> <!ENTITY % n7 SYSTEM \"Uri5\"> <!ENTITY % n8 PUBLIC \"Id3\" \"Uri6\"> ]\n><root></root>";
+            tokens = [
+                #docType({
+                    rootElementName = "root";
+                    typeDefinition = {
+                        externalTypes = null;
+                        internalTypes = [
+                            #generalEntity({
+                                name = "n1";
+                                type_ = #internal("v1");
+                            }),
+                            #generalEntity({
+                                name = "n2";
+                                type_ = #external({
+                                    url = "Uri1";
+                                    notationId = null;
+                                    type_ = #system_;
+                                });
+                            }),
+                            #generalEntity({
+                                name = "n3";
+                                type_ = #external({
+                                    url = "Uri2";
+                                    notationId = null;
+                                    type_ = #public_({ id = "Id1" });
+                                });
+                            }),
+                            #generalEntity({
+                                name = "n4";
+                                type_ = #external({
+                                    url = "Uri3";
+                                    notationId = ?"nd1";
+                                    type_ = #system_;
+                                });
+                            }),
+                            #generalEntity({
+                                name = "n5";
+                                type_ = #external({
+                                    url = "Uri4";
+                                    notationId = ?"nd2";
+                                    type_ = #public_({ id = "Id2" });
+                                });
+                            }),
+                            #parameterEntity({
+                                name = "n6";
+                                type_ = #internal("v2");
+                            }),
+                            #parameterEntity({
+                                name = "n7";
+                                type_ = #external({
+                                    url = "Uri5";
+                                    type_ = #system_;
+                                });
+                            }),
+                            #parameterEntity({
+                                name = "n8";
+                                type_ = #external({
+                                    url = "Uri6";
+                                    type_ = #public_({
+                                        id = "Id3";
+                                    });
+                                });
+                            }),
+                        ];
+                    };
+                }),
+                #startTag({
+                    name = "root";
+                    attributes = [];
+                    selfClosing = false;
+                }),
+                #endTag({ name = "root" }),
+            ];
+            doc = {
+                docType = ?{
+                    rootElementName = "root";
+                    typeDefinition = {
+                        externalTypes = null;
+                        internalTypes = [
+                            #generalEntity({
+                                name = "n1";
+                                type_ = #internal("v1");
+                            }),
+                            #generalEntity({
+                                name = "n2";
+                                type_ = #external({
+                                    url = "Uri1";
+                                    notationId = null;
+                                    type_ = #system_;
+                                });
+                            }),
+                            #generalEntity({
+                                name = "n3";
+                                type_ = #external({
+                                    url = "Uri2";
+                                    notationId = null;
+                                    type_ = #public_({ id = "Id1" });
+                                });
+                            }),
+                            #generalEntity({
+                                name = "n4";
+                                type_ = #external({
+                                    url = "Uri3";
+                                    notationId = ?"nd1";
+                                    type_ = #system_;
+                                });
+                            }),
+                            #generalEntity({
+                                name = "n5";
+                                type_ = #external({
+                                    url = "Uri4";
+                                    notationId = ?"nd2";
+                                    type_ = #public_({ id = "Id2" });
+                                });
+                            }),
+                            #parameterEntity({
+                                name = "n6";
+                                type_ = #internal("v2");
+                            }),
+                            #parameterEntity({
+                                name = "n7";
+                                type_ = #external({
+                                    url = "Uri5";
+                                    type_ = #system_;
+                                });
+                            }),
+                            #parameterEntity({
+                                name = "n8";
+                                type_ = #external({
+                                    url = "Uri6";
+                                    type_ = #public_({
+                                        id = "Id3";
+                                    });
+                                });
+                            }),
+                        ];
+                    };
+                };
+                encoding = null;
+                processInstructions = [];
+                root = { attributes = []; children = #open([]); name = "root" };
+                standalone = null;
+                version = null;
+            };
+        },
+        {
+            name = "DOCTYPE NOTATION";
+            raw = "<!DOCTYPE root [ <!NOTATION n1 SYSTEM \"Uri1\"> <!NOTATION n2 PUBLIC \"Id1\"> <!NOTATION n3 PUBLIC \"Id2\" \"Uri2\">  ]\n><root></root>";
+            tokens = [
+                #docType({
+                    rootElementName = "root";
+                    typeDefinition = {
+                        externalTypes = null;
+                        internalTypes = [
+                            #notation({
+                                name = "n1";
+                                type_ = #system_({
+                                    url = "Uri1";
+                                });
+                            }),
+                            #notation({
+                                name = "n2";
+                                type_ = #public_({
+                                    url = null;
+                                    id = "Id1";
+                                });
+                            }),
+                            #notation({
+                                name = "n3";
+                                type_ = #public_({
+                                    url = ?"Uri2";
+                                    id = "Id2";
+                                });
+                            }),
+                        ];
+                    };
+                }),
+                #startTag({
+                    name = "root";
+                    attributes = [];
+                    selfClosing = false;
+                }),
+                #endTag({ name = "root" }),
+            ];
+            doc = {
+                docType = ?{
+                    rootElementName = "root";
+                    typeDefinition = {
+                        externalTypes = null;
+                        internalTypes = [
+                            #notation({
+                                name = "n1";
+                                type_ = #system_({
+                                    url = "Uri1";
+                                });
+                            }),
+                            #notation({
+                                name = "n2";
+                                type_ = #public_({
+                                    url = null;
+                                    id = "Id1";
+                                });
+                            }),
+                            #notation({
+                                name = "n3";
+                                type_ = #public_({
+                                    url = ?"Uri2";
+                                    id = "Id2";
+                                });
+                            }),
+                        ];
+                    };
+                };
+                encoding = null;
+                processInstructions = [];
+                root = { attributes = []; children = #open([]); name = "root" };
+                standalone = null;
+                version = null;
+            };
+        },
+        {
+            name = "DOCTYPE COMMENT";
+            raw = "<!DOCTYPE root [ <!--Comment--> ]><root></root>";
+            tokens = [
+                #docType({
+                    rootElementName = "root";
+                    typeDefinition = {
+                        externalTypes = null;
+                        internalTypes = [
+                            #comment("Comment"),
+                        ];
+                    };
+                }),
+                #startTag({
+                    name = "root";
+                    attributes = [];
+                    selfClosing = false;
+                }),
+                #endTag({ name = "root" }),
+            ];
+            doc = {
+                docType = ?{
+                    rootElementName = "root";
+                    typeDefinition = {
+                        externalTypes = null;
+                        internalTypes = [
+                            #comment("Comment"),
                         ];
                     };
                 };
