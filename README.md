@@ -1,53 +1,62 @@
-# TODO
-CDATA
-ELEMENT
-ATTRLIST
-ENTITY
-NOTATION
+# Funding
+
+This library was originally incentivized by ICDevs. You can view more about the bounty on the forum or website. The bounty was funded by The ICDevs.org commuity and the award paid to @Gekctek. If you use this library and gain value from it, please consider a donation to ICDevs.
 
 # Overview
 
-This is a library that extends on the Motoko base library for numbers. Maily focuses on encoding of numbers and 16/32 bit precision floats
+This is a library that handles XML serialization and deserialization with UTF8 bytes and text
 
-# Package
+# Package installation
 
-### Vessel
+## MOPS
 
-Currently there is no official package but there is a manual process:
+### CLI
 
-1. Add the following to the `additions` list in the `package-set.dhall`
+Run `mops install xml`
+
+### Or manually:
+
+Modify the `mops.toml` file to add:
 
 ```
-{
-    name = "xtended-numbers"
-    , version = "{{Version}}"
-    , repo = "https://github.com/gekctek/motoko_numbers"
-    , dependencies = [] : List Text
+[dependencies]
+xml = "{version}"
+```
+
+where `{version}` is the version number you want to use
+
+See detailed MOPS documentation [here](https://mops.one/docs/install)
+
+# Usage
+
+```motoko
+import Element "mo:xml/Element"
+import Xml "mo:xml/Xml"
+...
+
+let element : Element.Element = {
+    name = "root";
+    attributes = [{ name = "attr1"; value=?"value1" }];
+    children = #open([
+        {
+            name = "br";
+            attributes = [];
+            children = #selfClosing;
+        }
+    ])
 }
+let serializedXml : Text = Xml.serialize(element); // <root attr1="value1"><br/></root>
+
+let xmlObj : Element.Element = Xml.deserialize("<root attr1=\"value1\"><br/></root>".chars())
 ```
 
-Where `{{Version}}` should be replaced with the latest release from https://github.com/Gekctek/motoko_numbers/releases/
+# First time setup
 
-2. Add `xtended-numbers` as a value in the dependencies list
-3. Run `make` which runs the vessel command to install the package
+To build the library, the `MOPS` library must be installed. It is used to pull down packages and running tests.
 
-# API
+MOPS install instructions: https://mops.one/docs/install
 
-# Library Devlopment:
+# Testing
 
-## First time setup
-
-To build the library, the `Vessel` library must be installed. It is used to pull down packages and locate the compiler for building.
-
-https://github.com/dfinity/vessel
-
-## Building
-
-To build, run the `./build.sh` file. It will output wasm files to the `./build` directory
-
-## Testing
-
-To run tests, use the `./test.sh` file.
-The entry point for all tests is `test/Tests.mo` file
-It will compile the tests to a wasm file and then that file will be executed.
-Currently there are no testing frameworks and testing will stop at the first broken test. It will then output the error to the console
+To run tests, use the `make test` command or run manually with `mops test`.
+The tests use MOPS test framework

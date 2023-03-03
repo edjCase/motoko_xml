@@ -1,7 +1,7 @@
 [dependencies]
 base = "0.8.1"
 xtended-numbers = "0.2.0"
-xtended-text = "0.1.0"
+xtended-text = "0.2.0"
 
 [package]
 name = "xml"

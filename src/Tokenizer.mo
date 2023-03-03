@@ -23,22 +23,8 @@ module {
 
     public type TokenizeResult = Result<[Token.Token]>;
 
-    public func tokenizeText(value : Text) : TokenizeResult {
-        let reader = IterX.IterReader<Char>(Text.toIter(value));
-        return tokenize(reader);
-    };
-
-    public func tokenizeBlob(value : Blob) : TokenizeResult {
-        let reader = IterX.IterReader<Char>(TextX.fromUtf8Bytes(value.vals()));
-        return tokenize(reader);
-    };
-
-    public func tokenizeBytes(value : [Nat8]) : TokenizeResult {
-        let reader = IterX.IterReader<Char>(TextX.fromUtf8Bytes(value.vals()));
-        return tokenize(reader);
-    };
-
-    public func tokenize(reader : IterX.IterReader<Char>) : TokenizeResult {
+    public func tokenize(value : Iter.Iter<Char>) : TokenizeResult {
+        let reader = IterX.IterReader<Char>(value);
         let tokenBuffer = Buffer.Buffer<Token.Token>(2);
         loop {
             switch (getNext(reader)) {
