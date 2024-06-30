@@ -1,6 +1,4 @@
 import Iter "mo:base/Iter";
-import Buffer "mo:base/Buffer";
-import Text "mo:base/Text";
 
 module {
 
@@ -18,7 +16,7 @@ module {
                 // If null then we need to get the next value
                 // and store it, but not affect the current value
                 case (null) peekCache := iter.next();
-                case (_)();
+                case (_) ();
             };
             return peekCache;
         };

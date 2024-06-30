@@ -1,8 +1,6 @@
-import Tokenizer "Tokenizer";
 import Iter "mo:base/Iter";
 import Buffer "mo:base/Buffer";
 import Text "mo:base/Text";
-import Debug "mo:base/Debug";
 import Token "Token";
 import Document "Document";
 
@@ -28,20 +26,20 @@ module {
         loop {
             switch (tokens.next()) {
                 case (null) return #error(#unexpectedEndOfTokens);
-                case (?#xmlDeclaration(x)) {
+                case (? #xmlDeclaration(x)) {
                     version := ?x.version;
                     encoding := x.encoding;
                 };
-                case (?#comment(c)) {
+                case (? #comment(c)) {
                     // Skip
                 };
-                case (?#processingInstruction(p)) {
+                case (? #processingInstruction(p)) {
                     processingInstructions.add(p);
                 };
-                case (?#docType(d)) {
+                case (? #docType(d)) {
                     docType := ?d;
                 };
-                case (?#startTag(tag)) {
+                case (? #startTag(tag)) {
                     let root = switch (parseElement(tokens, tag, tag.selfClosing)) {
                         case (#ok(e)) e;
                         case (#error(e)) return #error(e);
@@ -77,7 +75,7 @@ module {
         var buffer : ?Buffer.Buffer<Token.Token> = null;
         loop {
             switch (tokens.next()) {
-                case (?#comment(c)) {
+                case (? #comment(c)) {
                     // Skip
                 };
                 case (null) {
@@ -120,7 +118,7 @@ module {
         label l loop {
             switch (tokens.next()) {
                 case (null) {};
-                case (?#startTag(tag)) {
+                case (? #startTag(tag)) {
                     switch (parseElement(tokens, tag, tag.selfClosing)) {
                         case (#ok(inner)) {
                             children.add(#element(inner));
@@ -128,19 +126,19 @@ module {
                         case (#error(e)) return #error(e);
                     };
                 };
-                case (?#endTag(t)) {
+                case (? #endTag(t)) {
                     if (t.name != startTag.name) {
                         return #error(#unexpectedToken(#startTag(startTag)));
                     };
                     break l;
                 };
-                case (?#text(t)) {
+                case (? #text(t)) {
                     children.add(#text(t));
                 };
-                case (?#comment(c)) {
+                case (? #comment(c)) {
                     children.add(#comment(c));
                 };
-                case (?#cdata(c)) {
+                case (? #cdata(c)) {
                     children.add(#cdata(c));
                 };
                 case (?t) return #error(#unexpectedToken(t));

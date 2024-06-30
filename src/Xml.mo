@@ -5,22 +5,13 @@
 /// import Xml "mo:xml/Xml";
 /// ```
 
-import Array "mo:base/Array";
-import Buffer "mo:base/Buffer";
 import Iter "mo:base/Iter";
 import Text "mo:base/Text";
 import Tokenizer "Tokenizer";
 import Parser "Parser";
-import Blob "mo:base/Blob";
-import Debug "mo:base/Debug";
 import Element "Element";
-import Document "Document";
 import Token "Token";
-import NatX "mo:xtended-numbers/NatX";
 import Char "mo:base/Char";
-import Prelude "mo:base/Prelude";
-import Nat32 "mo:base/Nat32";
-import TrieMap "mo:base/TrieMap";
 import TextX "mo:xtended-text/TextX";
 import Serializer "Serializer";
 import Processor "Processor";

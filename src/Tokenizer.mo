@@ -1,17 +1,12 @@
 import Buffer "mo:base/Buffer";
 import Text "mo:base/Text";
 import Iter "mo:base/Iter";
-import Debug "mo:base/Debug";
 import Char "mo:base/Char";
 import Nat "mo:base/Nat";
 import NatX "mo:xtended-numbers/NatX";
-import Prelude "mo:base/Prelude";
-import Array "mo:base/Array";
-import Nat32 "mo:base/Nat32";
 import TextX "mo:xtended-text/TextX";
 import IterX "IterX";
 import TextSlice "TextSlice";
-import Slice "Slice";
 import Token "Token";
 import Document "Document";
 
@@ -68,7 +63,7 @@ module {
                             // < and > are only allowed in the context of tags
                             // must be escaped for text
                             case ('>') return #error("Unexpected character '>'");
-                            case (_)(); // Skip
+                            case (_) (); // Skip
                         };
                         charBuffer.add(c);
                         let _ = reader.next();
@@ -92,14 +87,14 @@ module {
         let attributes = Buffer.Buffer<Document.Attribute>(0);
 
         label l loop {
-            let attribute = switch (tagTokens.next()) {
+            switch (tagTokens.next()) {
                 case (null) {
                     break l;
                 };
-                case (?#error(e)) {
+                case (? #error(e)) {
                     return #error(e);
                 };
-                case (?#ok(t)) {
+                case (? #ok(t)) {
                     switch (splitAttribute(t)) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
                         case (?(name : Text, value : ?Text)) {
@@ -185,7 +180,7 @@ module {
 
                                 (TextSlice.slice(#buffer(buffer), 0, null), 1);
                             };
-                        },
+                        }
                     );
                     parse = parseDocType;
                 },
@@ -202,26 +197,26 @@ module {
         let iter = TagTokenIterator(slice);
         let rootElementName : Text = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) t.toText();
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) t.toText();
         };
         let (externalTypes : ?Document.ExternalTypesDefinition, internalTypes : [Document.InternalDocumentTypeDefinition]) = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) {
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) {
                 switch (TextX.toUpper(t.toText())) {
                     case ("PUBLIC") {
                         let publicId = switch (iter.next()) {
                             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                            case (?#error(e)) return #error(e);
-                            case (?#ok(t)) t.toText();
+                            case (? #error(e)) return #error(e);
+                            case (? #ok(t)) t.toText();
                         };
                         let url = switch (iter.next()) {
                             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                            case (?#error(e)) return #error(e);
-                            case (?#ok(t)) t.toText();
+                            case (? #error(e)) return #error(e);
+                            case (? #ok(t)) t.toText();
                         };
-                        let externalTypes : ?Document.ExternalTypesDefinition = ?#public_({
+                        let externalTypes : ?Document.ExternalTypesDefinition = ? #public_({
                             id = publicId;
                             url = url;
                         });
@@ -234,10 +229,10 @@ module {
                     case ("SYSTEM") {
                         let url = switch (iter.next()) {
                             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                            case (?#error(e)) return #error(e);
-                            case (?#ok(t)) t;
+                            case (? #error(e)) return #error(e);
+                            case (? #ok(t)) t;
                         };
-                        let externalTypes : ?Document.ExternalTypesDefinition = ?#system_({
+                        let externalTypes : ?Document.ExternalTypesDefinition = ? #system_({
                             url = url.toText();
                         });
                         let internalTypes : [Document.InternalDocumentTypeDefinition] = switch (parseInternalTypes(iter.toReader())) {
@@ -265,7 +260,7 @@ module {
                     externalTypes = externalTypes;
                     internalTypes = internalTypes;
                 };
-            }),
+            })
         );
     };
 
@@ -320,27 +315,27 @@ module {
         let iter = TagTokenIterator(slice);
         let nameOrPercent = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) t;
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) t;
         };
 
         let token : Document.InternalDocumentTypeDefinition = if (nameOrPercent.size() == 1 and nameOrPercent.get(0) == '%') {
             let name = switch (iter.next()) {
                 case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                case (?#error(e)) return #error(e);
-                case (?#ok(t)) t.toText();
+                case (? #error(e)) return #error(e);
+                case (? #ok(t)) t.toText();
             };
             let kind = switch (iter.next()) {
                 case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                case (?#error(e)) return #error(e);
-                case (?#ok(t)) t.toText();
+                case (? #error(e)) return #error(e);
+                case (? #ok(t)) t.toText();
             };
             let type_ = switch (kind) {
                 case ("SYSTEM") {
                     let url = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                        case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.trimSingle('\"').toText();
+                        case (? #error(e)) return #error(e);
+                        case (? #ok(t)) t.trimSingle('\"').toText();
                     };
                     #external({
                         type_ = #system_;
@@ -350,13 +345,13 @@ module {
                 case ("PUBLIC") {
                     let publicId = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                        case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.trimSingle('\"').toText();
+                        case (? #error(e)) return #error(e);
+                        case (? #ok(t)) t.trimSingle('\"').toText();
                     };
                     let url = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                        case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.trimSingle('\"').toText();
+                        case (? #error(e)) return #error(e);
+                        case (? #ok(t)) t.trimSingle('\"').toText();
                     };
                     #external({
                         type_ = #public_({ id = publicId });
@@ -376,15 +371,15 @@ module {
             let name = nameOrPercent.toText();
             let kind = switch (iter.next()) {
                 case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                case (?#error(e)) return #error(e);
-                case (?#ok(t)) t.toText();
+                case (? #error(e)) return #error(e);
+                case (? #ok(t)) t.toText();
             };
             let type_ = switch (kind) {
                 case ("SYSTEM") {
                     let url = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                        case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.trimSingle('\"').toText();
+                        case (? #error(e)) return #error(e);
+                        case (? #ok(t)) t.trimSingle('\"').toText();
                     };
                     let notationId : ?Text = switch (parseNotationId(iter)) {
                         case (#error(e)) return #error(e);
@@ -399,13 +394,13 @@ module {
                 case ("PUBLIC") {
                     let publicId = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                        case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.trimSingle('\"').toText();
+                        case (? #error(e)) return #error(e);
+                        case (? #ok(t)) t.trimSingle('\"').toText();
                     };
                     let url = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                        case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.trimSingle('\"').toText();
+                        case (? #error(e)) return #error(e);
+                        case (? #ok(t)) t.trimSingle('\"').toText();
                     };
                     let notationId : ?Text = switch (parseNotationId(iter)) {
                         case (#error(e)) return #error(e);
@@ -429,24 +424,24 @@ module {
 
         switch (iter.next()) {
             case (null) return #ok(token);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) return #error("Unexpected token '" # t.toText() # "'");
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) return #error("Unexpected token '" # t.toText() # "'");
         };
     };
 
     private func parseNotationId(iter : TagTokenIterator) : Result<?Text> {
         switch (iter.next()) {
             case (null) #ok(null);
-            case (?#error(e)) #error(e);
-            case (?#ok(t)) {
+            case (? #error(e)) #error(e);
+            case (? #ok(t)) {
                 let ndata = t.toText();
                 if (ndata != "NDATA") {
                     return #error("Unexpected token '" #ndata # "'. Expected 'NDATA'");
                 };
                 switch (iter.next()) {
                     case (null) #error(UNEXPECTED_ERROR_MESSAGE);
-                    case (?#error(e)) #error(e);
-                    case (?#ok(t)) #ok(?t.toText());
+                    case (? #error(e)) #error(e);
+                    case (? #ok(t)) #ok(?t.toText());
                 };
             };
         };
@@ -456,13 +451,13 @@ module {
         let iter = TagTokenIterator(slice);
         let name = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) t.toText();
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) t.toText();
         };
         let allowableContents : Document.AllowableContents = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(childSlice)) {
+            case (? #error(e)) return #error(e);
+            case (? #ok(childSlice)) {
                 if (childSlice.get(0) != '(') {
                     switch (childSlice.toText()) {
                         case ("EMPTY") #empty;
@@ -587,20 +582,20 @@ module {
         let iter = TagTokenIterator(slice);
         let elementName = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) t.toText();
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) t.toText();
         };
 
         let attributeName = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) t.toText();
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) t.toText();
         };
 
         let type_ : Document.AttributeType = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) {
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) {
                 if (t.get(0) == '(' and t.get(t.size() - 1) == ')') {
                     let enumValues = t.slice(1, ?(t.size() - 2)).split('|');
                     #enumeration(Iter.toArray(Iter.map<TextSlice.TextSlice, Text>(enumValues, func(t) = t.toText())));
@@ -617,8 +612,8 @@ module {
                         case ("NOTATION") {
                             let notations = switch (iter.next()) {
                                 case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                                case (?#error(e)) return #error(e);
-                                case (?#ok(t)) t.slice(1, ?(t.size() - 2)).split('|');
+                                case (? #error(e)) return #error(e);
+                                case (? #ok(t)) t.slice(1, ?(t.size() - 2)).split('|');
                             };
                             #notation(Iter.toArray(Iter.map<TextSlice.TextSlice, Text>(notations, func(t) = t.toText())));
                         };
@@ -630,15 +625,15 @@ module {
 
         let defaultValue = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) switch (t.toText()) {
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) switch (t.toText()) {
                 case ("#REQUIRED") #required;
                 case ("#IMPLIED") #implied;
                 case ("#FIXED") {
                     let fixedValue = switch (iter.next()) {
                         case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                        case (?#error(e)) return #error(e);
-                        case (?#ok(t)) t.trimSingle('\"').toText();
+                        case (? #error(e)) return #error(e);
+                        case (? #ok(t)) t.trimSingle('\"').toText();
                     };
                     #fixed(fixedValue);
                 };
@@ -652,7 +647,7 @@ module {
                 type_ = type_;
                 defaultValue = defaultValue;
                 elementName = elementName;
-            }),
+            })
         );
     };
 
@@ -660,32 +655,32 @@ module {
         let iter = TagTokenIterator(slice);
         let name = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) t.toText();
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) t.toText();
         };
         let type_ = switch (iter.next()) {
             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-            case (?#error(e)) return #error(e);
-            case (?#ok(t)) {
+            case (? #error(e)) return #error(e);
+            case (? #ok(t)) {
                 switch (t.toText()) {
                     case ("PUBLIC") {
                         let id = switch (iter.next()) {
                             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                            case (?#error(e)) return #error(e);
-                            case (?#ok(t)) t.trimSingle('\"').toText();
+                            case (? #error(e)) return #error(e);
+                            case (? #ok(t)) t.trimSingle('\"').toText();
                         };
                         let url = switch (iter.next()) {
                             case (null) null;
-                            case (?#error(e)) return #error(e);
-                            case (?#ok(t)) ?t.trimSingle('\"').toText();
+                            case (? #error(e)) return #error(e);
+                            case (? #ok(t)) ?t.trimSingle('\"').toText();
                         };
                         #public_({ id = id; url = url });
                     };
                     case ("SYSTEM") {
                         let url = switch (iter.next()) {
                             case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
-                            case (?#error(e)) return #error(e);
-                            case (?#ok(t)) t.trimSingle('\"').toText();
+                            case (? #error(e)) return #error(e);
+                            case (? #ok(t)) t.trimSingle('\"').toText();
                         };
                         #system_({ url = url });
                     };
@@ -698,7 +693,7 @@ module {
             #notation({
                 name = name;
                 type_ = type_;
-            }),
+            })
         );
     };
 
@@ -717,8 +712,8 @@ module {
 
     private func parseStartTag(slice : TextSlice.TextSlice) : Result<Token.Token> {
         let (trimmedSlice : TextSlice.TextSlice, isSelfClosing : Bool) = switch (slice.get(slice.size() - 1)) {
-            case ('/')(slice.slice(0, ?(slice.size() - 1)), true); // Started with a slash, so it's self closing, trim
-            case (s)(slice, false); // No slash, so it's not self closing, no trim
+            case ('/') (slice.slice(0, ?(slice.size() - 1)), true); // Started with a slash, so it's self closing, trim
+            case (_) (slice, false); // No slash, so it's not self closing, no trim
         };
 
         let tagInfo : Token.TagInfo = switch (getTagInfo(trimmedSlice)) {
@@ -841,8 +836,6 @@ module {
         };
 
         // Loop through cases and check if the startsWith matches
-        let matches : Bool = false;
-        var caseIndex : Nat = 0;
         for (c in Iter.fromArray(cases)) {
             switch (isMatch(c.startsWith, reIter)) {
                 case (null) return #error(UNEXPECTED_ERROR_MESSAGE);
@@ -860,7 +853,7 @@ module {
                                     // No match found
                                     return #error(UNEXPECTED_ERROR_MESSAGE);
                                 };
-                                case (?s)(s, suffix.size());
+                                case (?s) (s, suffix.size());
                             };
                         };
                         case (#custom(customReader)) {
@@ -925,7 +918,6 @@ module {
         let charIter = trimmedTagSlice.toIter();
         var lastStartIndex : Nat = 0;
         var nextIndex = 0;
-        var started = false;
 
         public func toReader() : IterX.IterReader<Char> {
             let restOfSlice = trimmedTagSlice.slice(lastStartIndex, null);
@@ -943,7 +935,7 @@ module {
                             inQuotes := not inQuotes;
                         } else if (c == '<' or c == '>') {
                             // Only allowed as tag start/end
-                            return ?#error("Unexpected character '" # Text.fromChar(c) # "'");
+                            return ? #error("Unexpected character '" # Text.fromChar(c) # "'");
                         } else {
                             if (not inQuotes) {
                                 if (Char.isWhitespace(c)) {
@@ -962,7 +954,7 @@ module {
                 return null;
             };
             let offset = if (isWhitespace) 1 else 0; // Remove whitespace
-            let result = ?#ok(trimmedTagSlice.slice(lastStartIndex, ?(nextIndex - lastStartIndex - offset)));
+            let result = ? #ok(trimmedTagSlice.slice(lastStartIndex, ?(nextIndex - lastStartIndex - offset)));
 
             lastStartIndex := nextIndex;
             result;

@@ -35,7 +35,6 @@ module {
         value : ?Text;
     };
 
-
     public type Version = { major : Nat; minor : Nat };
 
     public type ElementChoiceOrSequence = {

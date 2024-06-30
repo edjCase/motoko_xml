@@ -2,7 +2,6 @@ import Buffer "mo:base/Buffer";
 import Debug "mo:base/Debug";
 import Iter "mo:base/Iter";
 import Nat "mo:base/Nat";
-import Array "mo:base/Array";
 module Slice {
 
     public type Sequence<T> = {

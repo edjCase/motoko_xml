@@ -5,9 +5,11 @@ xtended-text = "0.2.0"
 
 [package]
 name = "xml"
-version = "0.1.0"
+version = "0.2.0"
 description = "A library for encoding and decoding XML"
 repository = "https://github.com/edjcase/motoko_xml"
+keywords = [ "xml" ]
+license = "MIT"
 
 [dev-dependencies]
 test = "1.0.1"
