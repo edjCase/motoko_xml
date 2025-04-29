@@ -1,4 +1,3 @@
-import Tokenizer "../src/Tokenizer";
 import Parser "../src/Parser";
 import Token "../src/Token";
 import Document "../src/Document";
@@ -347,7 +346,7 @@ module {
                                     #sequence([{
                                         kind = #element("#PCDATA");
                                         ocurrance = #one;
-                                    }]),
+                                    }])
                                 );
                                 name = "foo";
                             }),
@@ -364,7 +363,7 @@ module {
                                     #sequence([{
                                         kind = #element("foo");
                                         ocurrance = #one;
-                                    }]),
+                                    }])
                                 );
                                 name = "img3";
                             }),
@@ -379,7 +378,7 @@ module {
                                             kind = #element("img");
                                             ocurrance = #one;
                                         },
-                                    ]),
+                                    ])
                                 );
                                 name = "img4";
                             }),
@@ -394,7 +393,7 @@ module {
                                             kind = #element("img");
                                             ocurrance = #one;
                                         },
-                                    ]),
+                                    ])
                                 );
                                 name = "img5";
                             }),
@@ -407,7 +406,7 @@ module {
                                     #sequence([{
                                         kind = #element("foo");
                                         ocurrance = #oneOrMore;
-                                    }]),
+                                    }])
                                 );
                                 name = "img7";
                             }),
@@ -416,7 +415,7 @@ module {
                                     #sequence([{
                                         kind = #element("foo");
                                         ocurrance = #zeroOrOne;
-                                    }]),
+                                    }])
                                 );
                                 name = "img8";
                             }),
@@ -434,7 +433,7 @@ module {
                                             },
                                         ]);
                                         ocurrance = #zeroOrMore;
-                                    }]),
+                                    }])
                                 );
                                 name = "img9";
                             }),
@@ -459,7 +458,7 @@ module {
                                     #sequence([{
                                         kind = #element("#PCDATA");
                                         ocurrance = #one;
-                                    }]),
+                                    }])
                                 );
                                 name = "foo";
                             }),
@@ -473,13 +472,13 @@ module {
                                     #sequence([{
                                         kind = #element("foo");
                                         ocurrance = #one;
-                                    }]),
+                                    }])
                                 );
                                 name = "img3";
                             }),
                             #element({
                                 allowableContents = #children(
-                                    #choice([{ kind = #element("foo"); ocurrance = #one }, { kind = #element("img"); ocurrance = #one }]),
+                                    #choice([{ kind = #element("foo"); ocurrance = #one }, { kind = #element("img"); ocurrance = #one }])
                                 );
                                 name = "img4";
                             }),
@@ -494,7 +493,7 @@ module {
                                             kind = #element("img");
                                             ocurrance = #one;
                                         },
-                                    ]),
+                                    ])
                                 );
                                 name = "img5";
                             }),
@@ -503,7 +502,7 @@ module {
                                     #sequence([{
                                         kind = #element("foo");
                                         ocurrance = #zeroOrMore;
-                                    }]),
+                                    }])
                                 );
                                 name = "img6";
                             }),
@@ -512,7 +511,7 @@ module {
                                     #sequence([{
                                         kind = #element("foo");
                                         ocurrance = #oneOrMore;
-                                    }]),
+                                    }])
                                 );
                                 name = "img7";
                             }),
@@ -521,7 +520,7 @@ module {
                                     #sequence([{
                                         kind = #element("foo");
                                         ocurrance = #zeroOrOne;
-                                    }]),
+                                    }])
                                 );
                                 name = "img8";
                             }),
@@ -539,7 +538,7 @@ module {
                                             },
                                         ]);
                                         ocurrance = #zeroOrMore;
-                                    }]),
+                                    }])
                                 );
                                 name = "img9";
                             }),

@@ -1,6 +1,7 @@
 import Iter "mo:base/Iter";
 import Buffer "mo:base/Buffer";
 import Text "mo:base/Text";
+import Result "mo:base/Result";
 import Token "Token";
 import Document "Document";
 
@@ -12,10 +13,7 @@ module {
         #unexpectedToken : Token.Token;
     };
 
-    public type ParseResult<T> = {
-        #ok : T;
-        #error : ParseError;
-    };
+    public type ParseResult<T> = Result.Result<T, ParseError>;
 
     public func parseDocument(tokens : Iter.Iter<Token.Token>) : ParseResult<Document.Document> {
         var version : ?Document.Version = null;
@@ -25,24 +23,24 @@ module {
         let processingInstructions = Buffer.Buffer<Document.ProcessingInstruction>(1);
         loop {
             switch (tokens.next()) {
-                case (null) return #error(#unexpectedEndOfTokens);
-                case (? #xmlDeclaration(x)) {
+                case (null) return #err(#unexpectedEndOfTokens);
+                case (?#xmlDeclaration(x)) {
                     version := ?x.version;
                     encoding := x.encoding;
                 };
-                case (? #comment(c)) {
+                case (?#comment(_)) {
                     // Skip
                 };
-                case (? #processingInstruction(p)) {
+                case (?#processingInstruction(p)) {
                     processingInstructions.add(p);
                 };
-                case (? #docType(d)) {
+                case (?#docType(d)) {
                     docType := ?d;
                 };
-                case (? #startTag(tag)) {
+                case (?#startTag(tag)) {
                     let root = switch (parseElement(tokens, tag, tag.selfClosing)) {
                         case (#ok(e)) e;
-                        case (#error(e)) return #error(e);
+                        case (#err(e)) return #err(e);
                     };
                     // Check for tokens after the root
                     // Only allow for comments
@@ -52,7 +50,7 @@ module {
                         };
                         case (?tokens) {
                             if (tokens.size() > 0) {
-                                return #error(#tokensAfterRoot);
+                                return #err(#tokensAfterRoot);
                             };
                         };
                     };
@@ -66,7 +64,7 @@ module {
                         docType = docType;
                     });
                 };
-                case (?t) return #error(#unexpectedToken(t));
+                case (?t) return #err(#unexpectedToken(t));
             };
         };
     };
@@ -75,7 +73,7 @@ module {
         var buffer : ?Buffer.Buffer<Token.Token> = null;
         loop {
             switch (tokens.next()) {
-                case (? #comment(c)) {
+                case (?#comment(_)) {
                     // Skip
                 };
                 case (null) {
@@ -118,30 +116,30 @@ module {
         label l loop {
             switch (tokens.next()) {
                 case (null) {};
-                case (? #startTag(tag)) {
+                case (?#startTag(tag)) {
                     switch (parseElement(tokens, tag, tag.selfClosing)) {
                         case (#ok(inner)) {
                             children.add(#element(inner));
                         };
-                        case (#error(e)) return #error(e);
+                        case (#err(e)) return #err(e);
                     };
                 };
-                case (? #endTag(t)) {
+                case (?#endTag(t)) {
                     if (t.name != startTag.name) {
-                        return #error(#unexpectedToken(#startTag(startTag)));
+                        return #err(#unexpectedToken(#startTag(startTag)));
                     };
                     break l;
                 };
-                case (? #text(t)) {
+                case (?#text(t)) {
                     children.add(#text(t));
                 };
-                case (? #comment(c)) {
+                case (?#comment(c)) {
                     children.add(#comment(c));
                 };
-                case (? #cdata(c)) {
+                case (?#cdata(c)) {
                     children.add(#cdata(c));
                 };
-                case (?t) return #error(#unexpectedToken(t));
+                case (?t) return #err(#unexpectedToken(t));
             };
         };
 

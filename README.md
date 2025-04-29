@@ -12,7 +12,7 @@ This is a library that handles XML serialization and deserialization with UTF8 b
 
 ### CLI
 
-Run `mops install xml`
+Run `mops add xml`
 
 ### Or manually:
 
@@ -30,11 +30,10 @@ See detailed MOPS documentation [here](https://mops.one/docs/install)
 # Usage
 
 ```motoko
-import Element "mo:xml/Element"
-import Xml "mo:xml/Xml"
+import Xml "mo:xml"
 ...
 
-let element : Element.Element = {
+let element : Xml.Element = {
     name = "root";
     attributes = [{ name = "attr1"; value=?"value1" }];
     children = #open([
@@ -45,9 +44,17 @@ let element : Element.Element = {
         }
     ])
 }
-let serializedXml : Text = Xml.serialize(element); // <root attr1="value1"><br/></root>
+// To/from text
 
-let xmlObj : Element.Element = Xml.deserialize("<root attr1=\"value1\"><br/></root>".chars())
+let serializedXml : Text = Xml.toText(element); // <root attr1="value1"><br/></root>
+
+let xmlObj : Xml.Element = Xml.fromText("<root attr1=\"value1\"><br/></root>".chars())
+
+// OR to/from bytes
+
+let xmlBytes : Iter.Iter<Nat8> = Xml.toBytes(element);
+
+let xmlObj2 : Xml.Element = Xml.fromBytes(xmlBytes);
 ```
 
 # First time setup

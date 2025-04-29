@@ -7,10 +7,10 @@ import NatX "mo:xtended-numbers/NatX";
 import Iter "mo:base/Iter";
 import Char "mo:base/Char";
 import Nat32 "mo:base/Nat32";
+import Result "mo:base/Result";
 module {
-    type Result<T> = { #ok : T; #error : Text };
 
-    public func processDocument(document : Document.Document) : Result<Element.Element> {
+    public func processDocument(document : Document.Document) : Result.Result<Element.Element, Text> {
         let defaultEntries = Iter.fromArray([
             ("amp", "&"),
             ("apos", "'"),
@@ -25,7 +25,7 @@ module {
 
     private func addEntities(docType : ?Document.DocType, entityMap : TrieMap.TrieMap<Text, Text>) {
         switch (docType) {
-            case (null)();
+            case (null) ();
             case (?d) {
                 let paramerterEntityMap = TrieMap.TrieMap<Text, Text>(Text.equal, Text.hash);
                 // Add any parameter entities first, to potentially replace the entity values
@@ -34,7 +34,7 @@ module {
                         case (#parameterEntity({ name = n; type_ = #internal(v) })) {
                             paramerterEntityMap.put(("%" # n, v));
                         };
-                        case (_)();
+                        case (_) ();
                     };
                 };
                 // Add any general entity values
@@ -47,21 +47,21 @@ module {
                             };
                             entityMap.put((n, realV));
                         };
-                        case (_)();
+                        case (_) ();
                     };
                 };
             };
         };
     };
 
-    private func processElement(element : Document.Element, entityMap : TrieMap.TrieMap<Text, Text>) : Result<Element.Element> {
+    private func processElement(element : Document.Element, entityMap : TrieMap.TrieMap<Text, Text>) : Result.Result<Element.Element, Text> {
         let children : Element.ElementChildren = switch (element.children) {
             case (#open(children)) {
                 let childrenBuffer = Buffer.Buffer<Element.ElementChild>(children.size());
                 for (child in Iter.fromArray(children)) {
                     switch (processElementChild(child, entityMap)) {
-                        case (#error(e)) return #error(e);
-                        case (#ok(null))(); // Skip (comments)
+                        case (#err(e)) return #err(e);
+                        case (#ok(null)) (); // Skip (comments)
                         case (#ok(?c)) childrenBuffer.add(c);
                     };
                 };
@@ -80,27 +80,27 @@ module {
     private func processElementChild(
         child : Document.ElementChild,
         entityMap : TrieMap.TrieMap<Text, Text>,
-    ) : Result<?Element.ElementChild> {
+    ) : Result.Result<?Element.ElementChild, Text> {
         let processedChild = switch (child) {
             case (#element(e)) {
                 switch (processElement(e, entityMap)) {
-                    case (#error(e)) return #error(e);
+                    case (#err(e)) return #err(e);
                     case (#ok(e)) ?#element(e);
                 };
             };
             case (#text(t)) {
                 switch (processText(t, entityMap)) {
-                    case (#error(e)) return #error(e);
+                    case (#err(e)) return #err(e);
                     case (#ok(t)) ?#text(t);
                 };
             };
-            case (#comment(c)) null;
+            case (#comment(_)) null;
             case (#cdata(c)) ?#text(c); // Dont process CDATA
         };
         #ok(processedChild);
     };
 
-    private func processText(text : Text, entityMap : TrieMap.TrieMap<Text, Text>) : Result<Text> {
+    private func processText(text : Text, entityMap : TrieMap.TrieMap<Text, Text>) : Result.Result<Text, Text> {
         let decodedTexcharBuffer = Buffer.Buffer<Char>(text.size());
         let referenceValueBuffer = Buffer.Buffer<Char>(4);
         var inAmp = false;
@@ -112,8 +112,8 @@ module {
                     inAmp := false;
                     // Decode the value and write it to the text buffer
                     switch (writeEntityValue(referenceValueBuffer, decodedTexcharBuffer, entityMap)) {
-                        case (#ok)();
-                        case (#error(e)) return #error(e);
+                        case (#ok) ();
+                        case (#err(e)) return #err(e);
                     };
                     // Clear character buffer and continue iterating
                     referenceValueBuffer.clear();
@@ -131,7 +131,7 @@ module {
             };
         };
         if (inAmp) {
-            return #error("Unexpected character '&'");
+            return #err("Unexpected character '&'");
         };
         #ok(Text.fromIter(decodedTexcharBuffer.vals()));
     };
@@ -140,7 +140,7 @@ module {
         escapedValue : Buffer.Buffer<Char>,
         decodedTexcharBuffer : Buffer.Buffer<Char>,
         entityMap : TrieMap.TrieMap<Text, Text>,
-    ) : Result<()> {
+    ) : Result.Result<(), Text> {
         // If starts with a #, its a unicode character
         switch (escapedValue.get(0)) {
             case ('#') {
@@ -157,11 +157,11 @@ module {
                     NatX.fromText(decimal); // Parse decimal
                 };
                 switch (unicodeScalar) {
-                    case (null) return #error("Invalid unicode value '" # Text.fromIter(escapedValue.vals()) # "'");
+                    case (null) return #err("Invalid unicode value '" # Text.fromIter(escapedValue.vals()) # "'");
                     case (?s) {
                         // Must fit in a nat32
                         if (s > 4294967295) {
-                            return #error("Invalid unicode value '" # Text.fromIter(escapedValue.vals()) # "'");
+                            return #err("Invalid unicode value '" # Text.fromIter(escapedValue.vals()) # "'");
                         };
                         // Convert unicode id to a unicode character
                         let unicodeCharacter = Char.fromNat32(Nat32.fromNat(s));

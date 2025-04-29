@@ -11,7 +11,7 @@ for (example in Iter.fromArray(TestData.examples)) {
         "Tokenizer should succeed: " # example.name,
         func() {
             switch (Tokenizer.tokenize(example.raw.chars())) {
-                case (#error(e)) Debug.trap("Failed to tokenize xml.\n\nError:\n" # debug_show (e) # "\n\nXml:\n" # debug_show (example.raw));
+                case (#err(e)) Debug.trap("Failed to tokenize xml.\n\nError:\n" # debug_show (e) # "\n\nXml:\n" # debug_show (example.raw));
                 case (#ok(tokens)) {
                     var i = 0;
                     for (token in Iter.fromArray(tokens)) {
@@ -35,7 +35,7 @@ for (example in Iter.fromArray(TestData.TokenizingFailureExamples)) {
         func() {
             switch (Tokenizer.tokenize(example.rawXml.chars())) {
                 case (#ok(tokens)) Debug.trap("Expected failure but was sucessful.\n\nExpected Error: " # debug_show (example.error) # "\n\nRaw:\n" # example.rawXml # "\n\nTokens:\n" # debug_show (tokens));
-                case (#error(e)) {
+                case (#err(e)) {
                     if (e != example.error) {
                         Debug.trap("Wrong error.\n\nExpected Error:\n" # debug_show (example.error) # "\n\nActual Error:\n" # debug_show (e));
                     };

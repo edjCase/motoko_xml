@@ -3,7 +3,7 @@ import Iter "mo:base/Iter";
 import Buffer "mo:base/Buffer";
 import Text "mo:base/Text";
 module {
-    type Result<T> = { #ok : T; #error : Text };
+    type Result<T> = { #ok : T; #err : Text };
 
     public func serialize(root : Element.Element) : Iter.Iter<Char> {
         let buffer = Buffer.Buffer<Char>(100);
@@ -22,7 +22,7 @@ module {
             buffer.add('\"');
             switch (attr.value) {
                 case (?v) addText(buffer, v, true);
-                case (null)();
+                case (null) ();
             };
 
             buffer.add('\"');

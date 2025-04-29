@@ -3,7 +3,6 @@ import Parser "../src/Parser";
 import TestData "TestData";
 import Iter "mo:base/Iter";
 import { test } "mo:test";
-import Text "mo:base/Text";
 
 // Parser successful tests
 for (example in Iter.fromArray(TestData.examples)) {
@@ -11,7 +10,7 @@ for (example in Iter.fromArray(TestData.examples)) {
         "Parser should succeed: " # debug_show (example.name),
         func() {
             switch (Parser.parseDocument(Iter.fromArray(example.tokens))) {
-                case (#error(e)) {
+                case (#err(e)) {
                     Debug.trap("Failed to parse xml.\n\nError:\n" # debug_show (e) # "\n\nTokens:\n" # debug_show (example.tokens));
                 };
                 case (#ok(d)) {
@@ -30,7 +29,7 @@ for (example in Iter.fromArray(TestData.parsingFailureExamples)) {
         "Parser should fail: " # debug_show (example.name),
         func() {
             switch (Parser.parseDocument(Iter.fromArray(example.tokens))) {
-                case (#error(e)) {
+                case (#err(e)) {
                     if (e != example.error) {
                         Debug.trap("Wrong error.\n\nExpected Error:\n" # debug_show (example.error) # "\n\nActual Error:\n" # debug_show (e));
                     };
