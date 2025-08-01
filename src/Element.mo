@@ -7,25 +7,25 @@
 
 module {
 
-    /// An xml element type that can be serialized and deserialized
-    public type Element = {
-        name : Text;
-        attributes : [Attribute];
-        children : ElementChildren;
-    };
+  /// An xml element type that can be serialized and deserialized
+  public type Element = {
+    name : Text;
+    attributes : [Attribute];
+    children : ElementChildren;
+  };
 
-    public type ElementChildren = {
-        #selfClosing;
-        #open : [ElementChild];
-    };
+  public type ElementChildren = {
+    #selfClosing;
+    #open : [ElementChild];
+  };
 
-    public type ElementChild = {
-        #element : Element;
-        #text : Text;
-    };
+  public type ElementChild = {
+    #element : Element;
+    #text : Text;
+  };
 
-    public type Attribute = {
-        name : Text;
-        value : ?Text;
-    };
+  public type Attribute = {
+    name : Text;
+    value : ?Text;
+  };
 };
