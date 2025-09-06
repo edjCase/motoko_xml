@@ -1,9 +1,9 @@
-import Text "mo:core/Text";
-import Iter "mo:core/Iter";
-import Char "mo:core/Char";
-import Nat "mo:core/Nat";
-import List "mo:core/List";
-import NatX "mo:xtended-numbers/NatX";
+import Text "mo:core@1/Text";
+import Iter "mo:core@1/Iter";
+import Char "mo:core@1/Char";
+import Nat "mo:core@1/Nat";
+import List "mo:core@1/List";
+import NatX "mo:xtended-numbers@2/NatX";
 import IterX "IterX";
 import TextSlice "TextSlice";
 import Token "Token";
@@ -827,7 +827,7 @@ module {
             };
           };
         } else {
-          let c = List.get(readCharacters, charIndex);
+          let c = List.at(readCharacters, charIndex);
           charIndex += 1;
           ?c;
         };

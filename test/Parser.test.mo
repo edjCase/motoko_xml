@@ -1,8 +1,8 @@
 import Parser "../src/Parser";
 import TestData "TestData";
-import Iter "mo:core/Iter";
+import Iter "mo:core@1/Iter";
 import { test } "mo:test";
-import Runtime "mo:core/Runtime";
+import Runtime "mo:core@1/Runtime";
 
 // Parser successful tests
 for (example in Iter.fromArray(TestData.examples)) {

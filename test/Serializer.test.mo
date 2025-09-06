@@ -1,9 +1,9 @@
-import Iter "mo:core/Iter";
+import Iter "mo:core@1/Iter";
 import TestData "./TestData";
 import { test } "mo:test";
 import Xml "../src";
-import Text "mo:core/Text";
-import Runtime "mo:core/Runtime";
+import Text "mo:core@1/Text";
+import Runtime "mo:core@1/Runtime";
 
 for (example in Iter.fromArray(TestData.serializerExamples)) {
 

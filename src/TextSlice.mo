@@ -1,8 +1,8 @@
 import Slice "Slice";
-import Iter "mo:core/Iter";
-import Text "mo:core/Text";
-import Char "mo:core/Char";
-import List "mo:core/List";
+import Iter "mo:core@1/Iter";
+import Text "mo:core@1/Text";
+import Char "mo:core@1/Char";
+import List "mo:core@1/List";
 
 module {
 

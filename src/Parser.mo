@@ -1,7 +1,7 @@
-import Iter "mo:core/Iter";
-import Text "mo:core/Text";
-import Result "mo:core/Result";
-import List "mo:core/List";
+import Iter "mo:core@1/Iter";
+import Text "mo:core@1/Text";
+import Result "mo:core@1/Result";
+import List "mo:core@1/List";
 import Token "Token";
 import Document "Document";
 

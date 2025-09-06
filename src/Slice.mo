@@ -1,7 +1,7 @@
-import Iter "mo:core/Iter";
-import Nat "mo:core/Nat";
-import List "mo:core/List";
-import Runtime "mo:core/Runtime";
+import Iter "mo:core@1/Iter";
+import Nat "mo:core@1/Nat";
+import List "mo:core@1/List";
+import Runtime "mo:core@1/Runtime";
 
 module Slice {
 
@@ -125,7 +125,7 @@ module Slice {
     public func toIter() : Iter.Iter<T> {
       switch (sequence) {
         case (#array(a)) toIterInternal(a.size(), func(i) = a[i]);
-        case (#list(l)) toIterInternal(List.size(l), func(i) = List.get(l, i));
+        case (#list(l)) toIterInternal(List.size(l), func(i) = List.at(l, i));
         case (#slice(s)) s.toIter();
       };
     };
@@ -133,7 +133,7 @@ module Slice {
     private func getFromSequence(sequence : Sequence<T>, index : Nat) : T {
       switch (sequence) {
         case (#array(a)) a[index];
-        case (#list(l)) List.get(l, index);
+        case (#list(l)) List.at(l, index);
         case (#slice(s)) s.get(index);
       };
     };

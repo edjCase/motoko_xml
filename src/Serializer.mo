@@ -1,8 +1,8 @@
 import Element "Element";
-import Iter "mo:core/Iter";
-import Buffer "mo:buffer";
-import Text "mo:core/Text";
-import List "mo:core/List";
+import Iter "mo:core@1/Iter";
+import Buffer "mo:buffer@0";
+import Text "mo:core@1/Text";
+import List "mo:core@1/List";
 module {
   type Result<T> = { #ok : T; #err : Text };
 

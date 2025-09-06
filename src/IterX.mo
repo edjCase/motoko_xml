@@ -1,4 +1,4 @@
-import Iter "mo:core/Iter";
+import Iter "mo:core@1/Iter";
 
 module {
 

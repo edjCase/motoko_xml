@@ -1,13 +1,13 @@
 import Document "Document";
 import Element "Element";
-import Text "mo:core/Text";
-import NatX "mo:xtended-numbers/NatX";
-import Iter "mo:core/Iter";
-import Char "mo:core/Char";
-import Nat32 "mo:core/Nat32";
-import Result "mo:core/Result";
-import Map "mo:core/Map";
-import List "mo:core/List";
+import Text "mo:core@1/Text";
+import NatX "mo:xtended-numbers@2/NatX";
+import Iter "mo:core@1/Iter";
+import Char "mo:core@1/Char";
+import Nat32 "mo:core@1/Nat32";
+import Result "mo:core@1/Result";
+import Map "mo:core@1/Map";
+import List "mo:core@1/List";
 
 module {
 
@@ -143,10 +143,10 @@ module {
     entityMap : Map.Map<Text, Text>,
   ) : Result.Result<(), Text> {
     // If starts with a #, its a unicode character
-    switch (List.get(escapedValue, 0)) {
+    switch (List.at(escapedValue, 0)) {
       case ('#') {
         // # means its a unicode value
-        let unicodeScalar : ?Nat = if (List.get(escapedValue, 1) == 'x') {
+        let unicodeScalar : ?Nat = if (List.at(escapedValue, 1) == 'x') {
           // If prefixed with x, it is a hex value
           let hex = List.values(escapedValue)
           |> Iter.drop(_, 2) // Drop the #x

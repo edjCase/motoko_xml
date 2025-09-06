@@ -5,17 +5,17 @@
 /// import Xml "mo:xml";
 /// ```
 
-import Iter "mo:core/Iter";
-import Text "mo:core/Text";
+import Iter "mo:core@1/Iter";
+import Text "mo:core@1/Text";
 import Tokenizer "Tokenizer";
 import Parser "Parser";
 import Element "Element";
 import Token "Token";
-import Char "mo:core/Char";
-import Result "mo:core/Result";
+import Char "mo:core@1/Char";
+import Result "mo:core@1/Result";
 import Serializer "Serializer";
 import Processor "Processor";
-import Blob "mo:core/Blob";
+import Blob "mo:core@1/Blob";
 
 module {
 
